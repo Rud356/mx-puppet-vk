@@ -1,0 +1,7 @@
+config.yaml
+vk-registration.yaml
+node_modules
+build
+*.db
+*.log*
+*audit.json
