@@ -36,7 +36,8 @@ export class VkPuppet {
 		private puppet: PuppetBridge,
 	) { }
 
-	public async getSendParams(puppetId: number, peerId: number, senderId: number): Promise<IReceiveParams> {
+	public async getSendParams(puppetId: number, peerId: number, senderId: number, eventId?: string | undefined):
+	Promise<IReceiveParams> {
 		// we will use this function internally to create the send parameters
 		// needed to send a message, a file, reactions, ... to matrix
 		log.info(`Creating send params for ${peerId}...`);
@@ -44,6 +45,7 @@ export class VkPuppet {
 		return {
 			room: await this.getRemoteRoom(puppetId, peerId),
 			user: await this.getRemoteUser(puppetId, senderId),
+			eventId,
 		};
 	}
 
@@ -174,6 +176,7 @@ export class VkPuppet {
 				message: data.body,
 				random_id: new Date().getTime(),
 			});
+			await this.puppet.eventSync.insert(room, data.eventId!, response.toString());
 		} catch (err) {
 			log.error("Error sending to vk", err.error || err.body || err);
 		}
@@ -211,7 +214,7 @@ export class VkPuppet {
 		}
 		log.info("Received new message!", context);
 
-		const params = await this.getSendParams(puppetId, context.peerId, context.senderId);
+		const params = await this.getSendParams(puppetId, context.peerId, context.senderId, context.id.toString());
 
 		if (context.hasText && !context.isOutbox) {
 			const opts = {
