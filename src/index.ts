@@ -82,12 +82,12 @@ async function run() {
 	// create our own protocol class
 	const vk = new VkPuppet(puppet);
 
-	// required: listen to when a new puppet is created
 	puppet.on("puppetNew", vk.newPuppet.bind(vk));
-	// required: listen to when a puppet is deleted
 	puppet.on("puppetDelete", vk.deletePuppet.bind(vk));
-	// required: listen to when a message is received from matrix
 	puppet.on("message", vk.handleMatrixMessage.bind(vk));
+	puppet.on("reply", vk.handleMatrixReply.bind(vk));
+
+
 	puppet.setCreateRoomHook(vk.createRoom.bind(vk));
 	// required: get description hook
 	puppet.setGetDescHook(async (puppetId: number, data: any): Promise<string> => {

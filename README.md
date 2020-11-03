@@ -18,10 +18,10 @@ Register that one with synapse and start the bridge with `npm run start`.
     - [ ] Image content
     - [ ] Audio/Video content
     - [ ] Other files
-    - [ ] Replies
-    - [ ] Typing notifs
-    - [ ] Presence
-    - [ ] Read notifications
+    - [x] Replies
+    - [ ] Typing notifs - not possible yet
+    - [ ] Presence - not possible yet
+    - [ ] Read notifications - not possible yet
     - [ ] Message edits
     - [ ] Message redacts
 - VK -> Matrix
@@ -30,7 +30,7 @@ Register that one with synapse and start the bridge with `npm run start`.
     - [ ] Audio/Video content
     - [ ] Stickers
     - [ ] Other files
-    - [ ] Presence
+    - [ ] Presence - not effective to track
     - [x] Typing notifs
     - [x] User profiles
     - [ ] Read notifications

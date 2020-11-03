@@ -37,7 +37,7 @@ export class VkPuppet {
 	) { }
 
 	public async getSendParams(puppetId: number, peerId: number, senderId: number, eventId?: string | undefined):
-	Promise<IReceiveParams> {
+		Promise<IReceiveParams> {
 		// we will use this function internally to create the send parameters
 		// needed to send a message, a file, reactions, ... to matrix
 		log.info(`Creating send params for ${peerId}...`);
@@ -159,6 +159,10 @@ export class VkPuppet {
 		delete this.puppets[puppetId]; // and finally delete our local copy
 	}
 
+	//////////////////////////
+	// Matrix -> VK section //
+	//////////////////////////
+
 	public async handleMatrixMessage(room: IRemoteRoom, data: IMessageEvent, event: any) {
 		// this is called every time we receive a message from matrix and need to
 		// forward it to the remote protocol.
@@ -169,7 +173,6 @@ export class VkPuppet {
 			return;
 		}
 		// usually you'd send it here to the remote protocol via the client object
-		const dedupeKey = `${room.puppetId};${room.roomId}`;
 		try {
 			const response = await p.client.api.messages.send({
 				peer_id: Number(room.roomId),
@@ -180,7 +183,29 @@ export class VkPuppet {
 		} catch (err) {
 			log.error("Error sending to vk", err.error || err.body || err);
 		}
+	}
 
+	public async handleMatrixReply(
+		room: IRemoteRoom,
+		eventId: string,
+		data: IMessageEvent,
+		event: any,
+	) {
+		const p = this.puppets[room.puppetId];
+		if (!p) {
+			return;
+		}
+		try {
+			const response = await p.client.api.messages.send({
+				peer_id: Number(room.roomId),
+				message: data.body,
+				random_id: new Date().getTime(),
+				reply_to: Number(eventId),
+			});
+			await this.puppet.eventSync.insert(room, data.eventId!, response.toString());
+		} catch (err) {
+			log.error("Error sending to vk", err.error || err.body || err);
+		}
 	}
 
 	public async createRoom(room: IRemoteRoom): Promise<IRemoteRoom | null> {
@@ -193,19 +218,9 @@ export class VkPuppet {
 		return await this.getRemoteRoom(room.puppetId, Number(room.roomId));
 	}
 
-	public async getDmRoomId(user: IRemoteUser): Promise<string | null> {
-		// this is called whenever someone invites a ghost on the matrix side
-		// from the user ID we need to return the room ID of the DM room, or null if none is present
-
-		// first we check if the puppet exists
-		const p = this.puppets[user.puppetId];
-		if (!p) {
-			return null;
-		}
-
-		// now we just return the userId of the ghost
-		return user.userId;
-	}
+	//////////////////////////
+	// VK -> Matrix section //
+	//////////////////////////
 
 	public async handleVkMessage(puppetId: number, context: MessageContext) {
 		const p = this.puppets[puppetId];
@@ -213,14 +228,40 @@ export class VkPuppet {
 			return;
 		}
 		log.info("Received new message!", context);
+		if (context.isOutbox) {
+			return; // Deduping
+		}
 
 		const params = await this.getSendParams(puppetId, context.peerId, context.senderId, context.id.toString());
 
-		if (context.hasText && !context.isOutbox) {
-			const opts = {
+		if (context.hasText) {
+			const opts: IMessageEvent = {
 				body: context.text || "Attachment",
 			};
+			if (context.hasReplyMessage) {
+				if (this.puppet.eventSync.getMatrix(params.room, context.replyMessage!.id.toString())) {
+					// We got referenced message in room, using matrix reply
+					await this.puppet.sendReply(params, context.replyMessage!.id.toString(), opts);
+				} else {
+					// Using a fallback
+				}
+			}
 			await this.puppet.sendMessage(params, opts);
 		}
+	}
+
+	////////////////
+	// Formatters //
+	////////////////
+
+	public async prependReply(puppetId: number, body: string, reply: string, userid: string) {
+		const user = await this.getRemoteUser(puppetId, Number(userid));
+		const replySplitted = reply.split("\n");
+		let formatted: string = `> <${user.name}>\n`;
+		replySplitted.forEach((element) => {
+			formatted += `> ${element}`;
+		});
+		formatted += `\n\n${body}`;
+		return formatted;
 	}
 }
