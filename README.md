@@ -22,6 +22,8 @@ Register that one with synapse and start the bridge with `npm run start`.
     - [ ] Typing notifs
     - [ ] Presence
     - [ ] Read notifications
+    - [ ] Message edits
+    - [ ] Message redacts
 - VK -> Matrix
     - [x] Text content
     - [ ] Image content
@@ -32,6 +34,8 @@ Register that one with synapse and start the bridge with `npm run start`.
     - [x] Typing notifs
     - [x] User profiles
     - [ ] Read notifications
+    - [ ] Message edits
+    - [ ] Message redacts
 
 ## Usage
 1. Get VK community token (Just open the "Manage community" tab, go to "API usage" tab and click "Create token")
