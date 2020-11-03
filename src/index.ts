@@ -47,8 +47,10 @@ if (options.help) {
 // here we define some information about our protocol, what features it supports etc.
 const protocol: IProtocolInformation = {
 	features: {
-		file: false,
+		image: true,
+		file: true,
 		presence: false,
+		reply: true,
 	},
 	id: "vk", // an internal ID for the protocol, all lowercase
 	displayname: "VK", // a human-readable name of the protocol
@@ -86,6 +88,8 @@ async function run() {
 	puppet.on("puppetDelete", vk.deletePuppet.bind(vk));
 	puppet.on("message", vk.handleMatrixMessage.bind(vk));
 	puppet.on("reply", vk.handleMatrixReply.bind(vk));
+	puppet.on("image", vk.handleMatrixImage.bind(vk));
+	puppet.on("file", vk.handleMatrixFile.bind(vk));
 
 
 	puppet.setCreateRoomHook(vk.createRoom.bind(vk));

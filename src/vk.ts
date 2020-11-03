@@ -8,11 +8,13 @@ import {
 	IFileEvent,
 	MessageDeduplicator,
 	Log,
+	ISendingUser,
 } from "mx-puppet-bridge";
 
-import { VK, MessageContext, Context } from "vk-io";
+import { VK, MessageContext, Context, AttachmentType } from "vk-io";
 import { userInfo } from "os";
 import { runInThisContext } from "vm";
+import { lookup } from "dns";
 
 // here we create our log instance
 const log = new Log("VKPuppet:vk");
@@ -196,6 +198,7 @@ export class VkPuppet {
 			return;
 		}
 		try {
+			log.info("Sending reply", Number(eventId));
 			const response = await p.client.api.messages.send({
 				peer_id: Number(room.roomId),
 				message: data.body,
@@ -205,6 +208,100 @@ export class VkPuppet {
 			await this.puppet.eventSync.insert(room, data.eventId!, response.toString());
 		} catch (err) {
 			log.error("Error sending to vk", err.error || err.body || err);
+		}
+	}
+
+	public async handleMatrixImage(
+		room: IRemoteRoom,
+		data: IFileEvent,
+		asUser: ISendingUser | null,
+		event: any,
+	) {
+		const p = this.puppets[room.puppetId];
+		if (!p) {
+			return;
+		}
+		const MAXFILESIZE = 50000000;
+		const size = data.info ? data.info.size || 0 : 0;
+
+		if (size < MAXFILESIZE) {
+			try {
+				log.info("Sending image...");
+				const attachment = await p.client.upload.messagePhoto({
+					peer_id: Number(room.roomId),
+					source: {
+						value: data.url,
+					},
+				});
+				log.info("Image sent", attachment);
+				const response = await p.client.api.messages.send({
+					peer_id: Number(room.roomId),
+					random_id: new Date().getTime(),
+					attachment: [`photo${attachment.ownerId}_${attachment.id}`],
+				});
+				await this.puppet.eventSync.insert(room, data.eventId!, response.toString());
+			} catch (err) {
+				log.error("Error sending to vk", err.error || err.body || err);
+			}
+		} else {
+			try {
+				const response = await p.client.api.messages.send({
+					peer_id: Number(room.roomId),
+					message: `File ${data.filename} was sent, but it is too big for VK. You may download it there:\n${data.url}`,
+					random_id: new Date().getTime(),
+				});
+				await this.puppet.eventSync.insert(room, data.eventId!, response.toString());
+			} catch (err) {
+				log.error("Error sending to vk", err.error || err.body || err);
+			}
+		}
+	}
+
+	public async handleMatrixFile(
+		room: IRemoteRoom,
+		data: IFileEvent,
+		asUser: ISendingUser | null,
+		event: any,
+	) {
+		const p = this.puppets[room.puppetId];
+		if (!p) {
+			return;
+		}
+		const MAXFILESIZE = 50000000;
+		const size = data.info ? data.info.size || 0 : 0;
+
+		if (size < MAXFILESIZE) {
+			try {
+				log.info("Sending file...");
+				const attachment = await p.client.upload.messageDocument({
+					peer_id: Number(room.roomId),
+					source: {
+						value: data.url,
+						filename: data.filename,
+						contentType: 
+					},
+				});
+				log.info("File sent", attachment);
+				const response = await p.client.api.messages.send({
+					peer_id: Number(room.roomId),
+					random_id: new Date().getTime(),
+					attachment: [`doc${attachment.ownerId}_${attachment.id}`],
+				});
+				await this.puppet.eventSync.insert(room, data.eventId!, response.toString());
+			} catch (err) {
+				log.error("Error sending to vk", err.error || err.body || err);
+			}
+		} else {
+			try {
+				const response = await p.client.api.messages.send({
+					peer_id: Number(room.roomId),
+					message: `File ${data.filename} was sent, but it is too big for VK. You may download it there:\n${data.url}`,
+					random_id: new Date().getTime(),
+				});
+				await this.puppet.eventSync.insert(room, data.eventId!, response.toString());
+			} catch (err) {
+				log.error("Error sending to vk", err.error || err.body || err);
+			}
 		}
 	}
 
@@ -235,18 +332,46 @@ export class VkPuppet {
 		const params = await this.getSendParams(puppetId, context.peerId, context.senderId, context.id.toString());
 
 		if (context.hasText) {
-			const opts: IMessageEvent = {
-				body: context.text || "Attachment",
-			};
 			if (context.hasReplyMessage) {
 				if (this.puppet.eventSync.getMatrix(params.room, context.replyMessage!.id.toString())) {
+					const opts: IMessageEvent = {
+						body: context.text || "Attachment",
+					};
 					// We got referenced message in room, using matrix reply
 					await this.puppet.sendReply(params, context.replyMessage!.id.toString(), opts);
 				} else {
 					// Using a fallback
+					const opts: IMessageEvent = {
+						body: await this.prependReply(
+							puppetId, context.text || "",
+							context.replyMessage?.text || "",
+							context.senderId.toString(),
+						),
+					};
+					await this.puppet.sendMessage(params, opts);
+				}
+			} else {
+				const opts: IMessageEvent = {
+					body: context.text || "Attachment",
+				};
+				await this.puppet.sendMessage(params, opts);
+			}
+		}
+		if (context.hasAttachments()) {
+			for (const f of context.attachments) {
+				if (f.type === AttachmentType.PHOTO) {
+					log.info(f);
+					try {
+						// tslint:disable-next-line: no-string-literal
+						await this.puppet.sendFileDetect(params, f["largeSizeUrl"]);
+					} catch (err) {
+						const opts: IMessageEvent = {
+							body: `Image was sent: ${f["largeSizeUrl"]}`,
+						};
+						await this.puppet.sendMessage(params, opts);
+					}
 				}
 			}
-			await this.puppet.sendMessage(params, opts);
 		}
 	}
 

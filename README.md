@@ -15,9 +15,9 @@ Register that one with synapse and start the bridge with `npm run start`.
 ## Features and roadmap
 - Matrix -> VK
     - [x] Text content
-    - [ ] Image content
-    - [ ] Audio/Video content
-    - [ ] Other files
+    - [x] Image content
+    - [x] Audio/Video content
+    - [x] Other files
     - [x] Replies
     - [ ] Typing notifs - not possible yet
     - [ ] Presence - not possible yet
@@ -26,7 +26,7 @@ Register that one with synapse and start the bridge with `npm run start`.
     - [ ] Message redacts
 - VK -> Matrix
     - [x] Text content
-    - [ ] Image content
+    - [x] Image content
     - [ ] Audio/Video content
     - [ ] Stickers
     - [ ] Other files
