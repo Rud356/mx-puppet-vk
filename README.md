@@ -1,7 +1,9 @@
 # mx-puppet-vk
-This is a Matrix <-> VK bridge based on [mx-puppet-bridge](https://github.com/Sorunome/mx-puppet-bridge).
+This is a Matrix <-> VK bridge based on [mx-puppet-bridge](https://github.com/Sorunome/mx-puppet-bridge) and [VK-IO](https://github.com/negezor/vk-io).
 
-It is it early development and should be considered as proof-of-concept.
+It is in early development and should be considered as proof-of-concept. Right now it logs message data when log level includes "info" level.
+
+Group chats are not properly tested.
 
 ## Installation
 ```bash

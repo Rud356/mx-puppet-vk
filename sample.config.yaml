@@ -58,7 +58,7 @@ logging:
       # Log level for this file
       # Allowed values starting with most verbose:
       # silly, debug, verbose, info, warn, error
-      level: info
+      level: warn
       # Date and time formatting
       datePattern: YYYY-MM-DD
       # Maximum number of logs to keep.
