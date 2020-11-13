@@ -94,9 +94,9 @@ async function run() {
 	puppet.on("image", vk.handleMatrixImage.bind(vk));
 	puppet.on("file", vk.handleMatrixFile.bind(vk));
 
-
 	puppet.setCreateRoomHook(vk.createRoom.bind(vk));
 	// required: get description hook
+	// tslint:disable-next-line: no-any
 	puppet.setGetDescHook(async (puppetId: number, data: any): Promise<string> => {
 		// here we receive the puppet ID and the data associated with that puppet
 		// we are expected to return a displayable name for that particular puppet

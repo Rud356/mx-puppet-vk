@@ -24,6 +24,7 @@ interface IEchoPuppet {
 	// this is usually a client class that connects to the remote protocol
 	// as we just echo back, unneeded in our case
 	client: VK;
+	// tslint:disable-next-line: no-any
 	data: any; // and let's keep a copy of the data associated with a puppet
 }
 
@@ -42,7 +43,7 @@ export class VkPuppet {
 		Promise<IReceiveParams> {
 		// we will use this function internally to create the send parameters
 		// needed to send a message, a file, reactions, ... to matrix
-		//log.info(`Creating send params for ${peerId}...`);
+		// log.info(`Creating send params for ${peerId}...`);
 
 		return {
 			room: await this.getRemoteRoom(puppetId, peerId),
@@ -53,7 +54,7 @@ export class VkPuppet {
 
 	public async getRemoteUser(puppetId: number, userId: number): Promise<IRemoteUser> {
 		const p = this.puppets[puppetId];
-		//log.info("User id:", userId, userId.toString());
+		// log.info("User id:", userId, userId.toString());
 		if (userId < 0) {
 			const info = await p.client.api.groups.getById({ group_id: Math.abs(userId).toString() });
 			const response: IRemoteUser = {
@@ -78,10 +79,11 @@ export class VkPuppet {
 	public async getRemoteRoom(puppetId: number, peerId: number): Promise<IRemoteRoom> {
 		const p = this.puppets[puppetId];
 		const info = await p.client.api.messages.getConversationsById({ peer_ids: peerId, fields: ["photo_max"] });
-		//log.info(info.items[0]);
+		// log.info(info.items[0]);
 		let response: IRemoteRoom;
 		switch (info.items[0].peer.type) {
 			case "user":
+				// tslint:disable-next-line: no-shadowed-variable
 				const userInfo = await p.client.api.users.get({ user_ids: info.items[0].peer.id, fields: ["photo_max"] });
 				response = {
 					puppetId,
@@ -113,6 +115,7 @@ export class VkPuppet {
 		return response;
 	}
 
+	// tslint:disable-next-line: no-any
 	public async newPuppet(puppetId: number, data: any) {
 		// this is called when we need to create a new puppet
 		// the puppetId is the ID associated with that puppet and the data its data
@@ -173,6 +176,7 @@ export class VkPuppet {
 	// Matrix -> VK section //
 	//////////////////////////
 
+	// tslint:disable-next-line: no-any
 	public async handleMatrixMessage(room: IRemoteRoom, data: IMessageEvent, event: any) {
 		// this is called every time we receive a message from matrix and need to
 		// forward it to the remote protocol.
@@ -235,6 +239,7 @@ export class VkPuppet {
 		room: IRemoteRoom,
 		eventId: string,
 		data: IMessageEvent,
+		// tslint:disable-next-line: no-any
 		event: any,
 	) {
 		const p = this.puppets[room.puppetId];
@@ -242,7 +247,7 @@ export class VkPuppet {
 			return;
 		}
 		try {
-			//log.info("Sending reply", Number(eventId));
+			// log.info("Sending reply", Number(eventId));
 			const response = await p.client.api.messages.send({
 				peer_id: Number(room.roomId),
 				message: await this.stripReply(data.body),
@@ -259,6 +264,7 @@ export class VkPuppet {
 		room: IRemoteRoom,
 		data: IFileEvent,
 		asUser: ISendingUser | null,
+		// tslint:disable-next-line: no-any
 		event: any,
 	) {
 		const p = this.puppets[room.puppetId];
@@ -270,14 +276,14 @@ export class VkPuppet {
 
 		if (size < MAXFILESIZE) {
 			try {
-				//log.info("Sending image...");
+				// log.info("Sending image...");
 				const attachment = await p.client.upload.messagePhoto({
 					peer_id: Number(room.roomId),
 					source: {
 						value: data.url,
 					},
 				});
-				//log.info("Image sent", attachment);
+				// log.info("Image sent", attachment);
 				const response = await p.client.api.messages.send({
 					peer_id: Number(room.roomId),
 					random_id: new Date().getTime(),
@@ -305,6 +311,7 @@ export class VkPuppet {
 		room: IRemoteRoom,
 		data: IFileEvent,
 		asUser: ISendingUser | null,
+		// tslint:disable-next-line: no-any
 		event: any,
 	) {
 		const p = this.puppets[room.puppetId];
@@ -316,7 +323,7 @@ export class VkPuppet {
 
 		if (size < MAXFILESIZE) {
 			try {
-				//log.info("Sending file...");
+				// log.info("Sending file...");
 				const attachment = await p.client.upload.messageDocument({
 					peer_id: Number(room.roomId),
 					source: {
@@ -324,7 +331,7 @@ export class VkPuppet {
 						filename: data.filename,
 					},
 				});
-				//log.info("File sent", attachment);
+				// log.info("File sent", attachment);
 				const response = await p.client.api.messages.send({
 					peer_id: Number(room.roomId),
 					random_id: new Date().getTime(),
@@ -356,7 +363,6 @@ export class VkPuppet {
 			}
 		}
 	}
-
 
 	public async createRoom(room: IRemoteRoom): Promise<IRemoteRoom | null> {
 		const p = this.puppets[room.puppetId];
@@ -460,27 +466,22 @@ export class VkPuppet {
 		}
 	}
 
-
 	public async handleVkEdit(puppetId: number, context: MessageContext) {
-		log.error("OwO", context);
 		const p = this.puppets[puppetId];
 		if (!p) {
 			return;
 		}
 		// As VK always sends edit as outbox, we won't work with any edits from groups
-		if (context.senderType == "group") {
-			log.error("oh no no");
-
+		if (context.senderType === "group") {
 			return; // Deduping
 		}
 
 		const params = await this.getSendParams(puppetId, context.peerId, context.senderId, context.id.toString());
-		log.error("UWU", context.hasText);
 		if (context.hasText) {
-				const opts: IMessageEvent = {
-					body: context.text || "Attachment",
-				};
-				await this.puppet.sendEdit(params, context.id.toString(), opts);
+			const opts: IMessageEvent = {
+				body: context.text || "Attachment",
+			};
+			await this.puppet.sendEdit(params, context.id.toString(), opts);
 		}
 	}
 
@@ -500,6 +501,7 @@ export class VkPuppet {
 	}
 
 	public async stripReply(body: string) {
+		// tslint:disable-next-line: prefer-const
 		let splitted = body.split("\n");
 		let isCitate = true;
 		while (isCitate) {
@@ -509,6 +511,6 @@ export class VkPuppet {
 				isCitate = false;
 			}
 		}
-		return(splitted.join('\n').trim());
+		return (splitted.join("\n").trim());
 	}
 }

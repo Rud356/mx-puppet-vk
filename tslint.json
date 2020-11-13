@@ -11,7 +11,7 @@
       "severity": "warning"
     },
     "arrow-return-shorthand": true,
-    "no-magic-numbers": [true, -1, 0, 1, 1000],
+    "no-magic-numbers": [true, -1, 0, 1, 1000, 2000000000, 4],
     "prefer-for-of": true,
     "typedef": {
       "severity": "warning"
