@@ -23,20 +23,21 @@ Register that one with synapse and start the bridge with `npm run start`.
     - [ ] Presence - not possible yet
     - [ ] Read notifications - not possible yet
     - [x] Message edits
-    - [ ] Message redacts
+    - [x] Message redacts - only works in 24 hours after message is sent
 - VK -> Matrix
     - [x] Text content
+    - [ ] Forwards
     - [x] Image content
     - [x] Audio content
     - [ ] Video content
     - [x] Stickers
-    - [ ] Other files
+    - [x] Other files
     - [ ] Presence - not effective to track
     - [x] Typing notifs
     - [x] User profiles
     - [ ] Read notifications - not effective to track
     - [x] Message edits
-    - [ ] Message redacts
+    - [ ] Message redacts - doesn't work
 
 ## Usage
 1. Get VK community token (Just open the "Manage community" tab, go to "API usage" tab and click "Create token")

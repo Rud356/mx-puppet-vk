@@ -89,6 +89,7 @@ async function run() {
 	puppet.on("puppetDelete", vk.deletePuppet.bind(vk));
 	puppet.on("message", vk.handleMatrixMessage.bind(vk));
 	puppet.on("edit", vk.handleMatrixEdit.bind(vk));
+	puppet.on("redact", vk.handleMatrixRedact.bind(vk));
 	puppet.on("reply", vk.handleMatrixReply.bind(vk));
 	puppet.on("image", vk.handleMatrixImage.bind(vk));
 	puppet.on("file", vk.handleMatrixFile.bind(vk));

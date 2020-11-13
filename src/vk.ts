@@ -214,6 +214,22 @@ export class VkPuppet {
 		}
 	}
 
+	public async handleMatrixRedact(room: IRemoteRoom, eventId: string) {
+		const p = this.puppets[room.puppetId];
+		if (!p) {
+			return;
+		}
+		// usually you'd send it here to the remote protocol via the client object
+		try {
+			await p.client.api.messages.delete({
+				spam: 0,
+				delete_for_all: 1,
+				message_ids: Number(eventId),
+			});
+		} catch (err) {
+			log.error("Error sending edit to vk", err.error || err.body || err);
+		}
+	}
 
 	public async handleMatrixReply(
 		room: IRemoteRoom,
@@ -361,7 +377,7 @@ export class VkPuppet {
 		if (!p) {
 			return;
 		}
-		//log.info("Received new message!", context);
+		log.info("Received new message!", context);
 		if (context.isOutbox) {
 			return; // Deduping
 		}
@@ -399,7 +415,6 @@ export class VkPuppet {
 				switch (f.type) {
 					case AttachmentType.PHOTO:
 						try {
-							// tslint:disable-next-line: no-string-literal
 							await this.puppet.sendFileDetect(params, f["largeSizeUrl"]);
 						} catch (err) {
 							const opts: IMessageEvent = {
@@ -424,6 +439,16 @@ export class VkPuppet {
 						} catch (err) {
 							const opts: IMessageEvent = {
 								body: `Audio message was sent: ${f["url"]}`,
+							};
+							await this.puppet.sendMessage(params, opts);
+						}
+						break;
+					case AttachmentType.DOCUMENT:
+						try {
+							await this.puppet.sendFileDetect(params, f["url"], f["title"]);
+						} catch (err) {
+							const opts: IMessageEvent = {
+								body: `Document was sent: ${f["url"]}`,
 							};
 							await this.puppet.sendMessage(params, opts);
 						}
