@@ -22,19 +22,20 @@ Register that one with synapse and start the bridge with `npm run start`.
     - [ ] Typing notifs - not possible yet
     - [ ] Presence - not possible yet
     - [ ] Read notifications - not possible yet
-    - [ ] Message edits
+    - [x] Message edits
     - [ ] Message redacts
 - VK -> Matrix
     - [x] Text content
     - [x] Image content
-    - [ ] Audio/Video content
-    - [ ] Stickers
+    - [x] Audio content
+    - [ ] Video content
+    - [x] Stickers
     - [ ] Other files
     - [ ] Presence - not effective to track
     - [x] Typing notifs
     - [x] User profiles
-    - [ ] Read notifications
-    - [ ] Message edits
+    - [ ] Read notifications - not effective to track
+    - [x] Message edits
     - [ ] Message redacts
 
 ## Usage

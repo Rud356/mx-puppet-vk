@@ -51,6 +51,7 @@ const protocol: IProtocolInformation = {
 		file: true,
 		presence: false,
 		reply: true,
+		edit: true,
 	},
 	id: "vk", // an internal ID for the protocol, all lowercase
 	displayname: "VK", // a human-readable name of the protocol
@@ -87,6 +88,7 @@ async function run() {
 	puppet.on("puppetNew", vk.newPuppet.bind(vk));
 	puppet.on("puppetDelete", vk.deletePuppet.bind(vk));
 	puppet.on("message", vk.handleMatrixMessage.bind(vk));
+	puppet.on("edit", vk.handleMatrixEdit.bind(vk));
 	puppet.on("reply", vk.handleMatrixReply.bind(vk));
 	puppet.on("image", vk.handleMatrixImage.bind(vk));
 	puppet.on("file", vk.handleMatrixFile.bind(vk));
