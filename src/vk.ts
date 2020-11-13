@@ -81,7 +81,7 @@ export class VkPuppet {
 		const info = await p.client.api.messages.getConversationsById({ peer_ids: peerId, fields: ["photo_max"] });
 		// log.info(info.items[0]);
 		let response: IRemoteRoom;
-		switch (info.items[0].peer.type) {
+		switch (info.items[0]?.peer.type || "chat") {
 			case "user":
 				// tslint:disable-next-line: no-shadowed-variable
 				const userInfo = await p.client.api.users.get({ user_ids: info.items[0].peer.id, fields: ["photo_max"] });
@@ -98,8 +98,9 @@ export class VkPuppet {
 				response = {
 					puppetId,
 					roomId: peerId.toString(),
-					name: info.items[0].chat_settings.title,
-					avatarUrl: info.items[0].chat_settings.photo.photo_200,
+					name: info.items[0]?.chat_settings.title || `VK chat №${(peerId - 2000000000).toString()}`,
+					topic: info.count === 0 ? "To recieve chat name and avatar, puppet needs admin rights on VK side" : null,
+					avatarUrl: info.items[0]?.chat_settings.photo?.photo_200,
 				};
 				break;
 
@@ -177,7 +178,7 @@ export class VkPuppet {
 	//////////////////////////
 
 	// tslint:disable-next-line: no-any
-	public async handleMatrixMessage(room: IRemoteRoom, data: IMessageEvent, event: any) {
+	public async handleMatrixMessage(room: IRemoteRoom, data: IMessageEvent, asUser: ISendingUser | null, event: any) {
 		// this is called every time we receive a message from matrix and need to
 		// forward it to the remote protocol.
 
@@ -186,30 +187,43 @@ export class VkPuppet {
 		if (!p) {
 			return;
 		}
+
+		if (asUser) {
+			const MAX_NAME_LENGTH = 80;
+			const displayname = (new TextEncoder().encode(asUser.displayname));
+			asUser.displayname = (new TextDecoder().decode(displayname.slice(0, MAX_NAME_LENGTH)));
+		}
 		// usually you'd send it here to the remote protocol via the client object
 		try {
 			const response = await p.client.api.messages.send({
-				peer_id: Number(room.roomId),
-				message: data.body,
+				peer_ids: Number(room.roomId),
+				message: asUser ? `${asUser.displayname}: ${data.body}` : data.body,
 				random_id: new Date().getTime(),
 			});
-			await this.puppet.eventSync.insert(room, data.eventId!, response.toString());
+			await this.puppet.eventSync.insert(room, data.eventId!,
+				response[0]["conversation_message_id"].toString());
 		} catch (err) {
 			log.error("Error sending to vk", err.error || err.body || err);
 		}
 	}
 
-	public async handleMatrixEdit(room: IRemoteRoom, eventId: string, data: IMessageEvent) {
+	public async handleMatrixEdit(room: IRemoteRoom, eventId: string, data: IMessageEvent, asUser: ISendingUser | null) {
 		const p = this.puppets[room.puppetId];
 		if (!p) {
 			return;
+		}
+
+		if (asUser) {
+			const MAX_NAME_LENGTH = 80;
+			const displayname = (new TextEncoder().encode(asUser.displayname));
+			asUser.displayname = (new TextDecoder().decode(displayname.slice(0, MAX_NAME_LENGTH)));
 		}
 		// usually you'd send it here to the remote protocol via the client object
 		try {
 			const response = await p.client.api.messages.edit({
 				peer_id: Number(room.roomId),
-				message: data.body,
-				message_id: Number(eventId),
+				conversation_message_id: Number(eventId),
+				message: asUser ? `${asUser.displayname}: ${data.body}` : data.body,
 				random_id: new Date().getTime(),
 			});
 			await this.puppet.eventSync.insert(room, data.eventId!, response.toString());
@@ -218,18 +232,26 @@ export class VkPuppet {
 		}
 	}
 
-	public async handleMatrixRedact(room: IRemoteRoom, eventId: string) {
+	public async handleMatrixRedact(room: IRemoteRoom, eventId: string, asUser: ISendingUser | null) {
 		const p = this.puppets[room.puppetId];
 		if (!p) {
 			return;
 		}
+
+		if (asUser) {
+			const MAX_NAME_LENGTH = 80;
+			const displayname = (new TextEncoder().encode(asUser.displayname));
+			asUser.displayname = (new TextDecoder().decode(displayname.slice(0, MAX_NAME_LENGTH)));
+		}
 		// usually you'd send it here to the remote protocol via the client object
 		try {
-			await p.client.api.messages.delete({
+			await this.handleMatrixEdit(room, eventId, { body: "[ДАННЫЕ УДАЛЕНЫ]", eventId }, asUser);
+			// broken in chats without admin access
+			/*await p.client.api.messages.delete({
 				spam: 0,
 				delete_for_all: 1,
 				message_ids: Number(eventId),
-			});
+			});*/
 		} catch (err) {
 			log.error("Error sending edit to vk", err.error || err.body || err);
 		}
@@ -239,6 +261,7 @@ export class VkPuppet {
 		room: IRemoteRoom,
 		eventId: string,
 		data: IMessageEvent,
+		asUser: ISendingUser | null,
 		// tslint:disable-next-line: no-any
 		event: any,
 	) {
@@ -246,15 +269,22 @@ export class VkPuppet {
 		if (!p) {
 			return;
 		}
+
+		if (asUser) {
+			const MAX_NAME_LENGTH = 80;
+			const displayname = (new TextEncoder().encode(asUser.displayname));
+			asUser.displayname = (new TextDecoder().decode(displayname.slice(0, MAX_NAME_LENGTH)));
+		}
+
 		try {
-			// log.info("Sending reply", Number(eventId));
 			const response = await p.client.api.messages.send({
-				peer_id: Number(room.roomId),
-				message: await this.stripReply(data.body),
+				peer_ids: Number(room.roomId),
+				message: asUser ? `${asUser.displayname}:  ${await this.stripReply(data.body)}` : await this.stripReply(data.body),
 				random_id: new Date().getTime(),
-				reply_to: Number(eventId),
+				forward: `{"peer_id":${Number(room.roomId)},"conversation_message_ids":${Number(eventId)},"is_reply": true}`,
 			});
-			await this.puppet.eventSync.insert(room, data.eventId!, response.toString());
+			await this.puppet.eventSync.insert(room, data.eventId!,
+				response[0]["conversation_message_id"].toString());
 		} catch (err) {
 			log.error("Error sending to vk", err.error || err.body || err);
 		}
@@ -274,22 +304,28 @@ export class VkPuppet {
 		const MAXFILESIZE = 50000000;
 		const size = data.info ? data.info.size || 0 : 0;
 
+		if (asUser) {
+			const MAX_NAME_LENGTH = 80;
+			const displayname = (new TextEncoder().encode(asUser.displayname));
+			asUser.displayname = (new TextDecoder().decode(displayname.slice(0, MAX_NAME_LENGTH)));
+		}
+
 		if (size < MAXFILESIZE) {
 			try {
-				// log.info("Sending image...");
 				const attachment = await p.client.upload.messagePhoto({
 					peer_id: Number(room.roomId),
 					source: {
 						value: data.url,
 					},
 				});
-				// log.info("Image sent", attachment);
 				const response = await p.client.api.messages.send({
-					peer_id: Number(room.roomId),
+					peer_ids: Number(room.roomId),
 					random_id: new Date().getTime(),
+					message: asUser ? `${asUser.displayname} sent a photo:` : undefined,
 					attachment: [`photo${attachment.ownerId}_${attachment.id}`],
 				});
-				await this.puppet.eventSync.insert(room, data.eventId!, response.toString());
+				await this.puppet.eventSync.insert(room, data.eventId!,
+					response[0]["conversation_message_id"].toString());
 			} catch (err) {
 				log.error("Error sending to vk", err.error || err.body || err);
 			}
@@ -323,7 +359,6 @@ export class VkPuppet {
 
 		if (size < MAXFILESIZE) {
 			try {
-				// log.info("Sending file...");
 				const attachment = await p.client.upload.messageDocument({
 					peer_id: Number(room.roomId),
 					source: {
@@ -331,21 +366,22 @@ export class VkPuppet {
 						filename: data.filename,
 					},
 				});
-				// log.info("File sent", attachment);
 				const response = await p.client.api.messages.send({
 					peer_id: Number(room.roomId),
 					random_id: new Date().getTime(),
+					message: asUser ? `${asUser.displayname} sent a file:` : undefined,
 					attachment: [`doc${attachment.ownerId}_${attachment.id}`],
 				});
 				await this.puppet.eventSync.insert(room, data.eventId!, response.toString());
 			} catch (err) {
 				try {
 					const response = await p.client.api.messages.send({
-						peer_id: Number(room.roomId),
+						peer_ids: Number(room.roomId),
 						message: `File ${data.filename} was sent, but VK refused to recieve it. You may download it there:\n${data.url}`,
 						random_id: new Date().getTime(),
 					});
-					await this.puppet.eventSync.insert(room, data.eventId!, response.toString());
+					await this.puppet.eventSync.insert(room, data.eventId!,
+						response[0]["conversation_message_id"].toString());
 				} catch (err) {
 					log.error("Error sending to vk", err.error || err.body || err);
 				}
@@ -353,11 +389,12 @@ export class VkPuppet {
 		} else {
 			try {
 				const response = await p.client.api.messages.send({
-					peer_id: Number(room.roomId),
+					peer_ids: Number(room.roomId),
 					message: `File ${data.filename} was sent, but it is too big for VK. You may download it there:\n${data.url}`,
 					random_id: new Date().getTime(),
 				});
-				await this.puppet.eventSync.insert(room, data.eventId!, response.toString());
+				await this.puppet.eventSync.insert(room, data.eventId!,
+					response[0]["conversation_message_id"].toString());
 			} catch (err) {
 				log.error("Error sending to vk", err.error || err.body || err);
 			}
@@ -388,7 +425,8 @@ export class VkPuppet {
 			return; // Deduping
 		}
 
-		const params = await this.getSendParams(puppetId, context.peerId, context.senderId, context.id.toString());
+		const params = await this.getSendParams(puppetId, context.peerId, context.senderId,
+			context.conversationMessageId?.toString() || context.id.toString());
 
 		if (context.hasText) {
 			if (context.hasReplyMessage) {

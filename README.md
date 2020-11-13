@@ -1,9 +1,9 @@
 # mx-puppet-vk
 This is a Matrix <-> VK bridge based on [mx-puppet-bridge](https://github.com/Sorunome/mx-puppet-bridge) and [VK-IO](https://github.com/negezor/vk-io).
 
-It is in early development and should be considered as proof-of-concept. Right now it logs message data when log level includes "info" level.
+It is in early development. Right now it logs message data when log level includes "info" level.
 
-Group chats are not properly tested.
+Relay mode works too, but we don't recommend it.
 
 ## Installation
 ```bash
@@ -25,7 +25,7 @@ Register that one with synapse and start the bridge with `npm run start`.
     - [ ] Presence - not possible yet
     - [ ] Read notifications - not possible yet
     - [x] Message edits
-    - [x] Message redacts - only works in 24 hours after message is sent
+    - [x] Message redacts - works as edit, real redact unavailable without being admin in chat
 - VK -> Matrix
     - [x] Text content
     - [ ] Forwards
@@ -49,3 +49,9 @@ Register that one with synapse and start the bridge with `npm run start`.
 5. Now, if someone contacts your community, you will be invited to the corresponding room on Matrix.
 
 Plese note: when community is invited to the group chat as a bot, make sure it has message access. Only chat admins can change bot permissions.
+
+Bridge doesn't handle being kicked from chat yet.
+
+### Relay usage
+
+See [mx-puppet-bridge docs](https://github.com/Sorunome/mx-puppet-bridge#relay-mode)

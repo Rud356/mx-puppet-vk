@@ -52,6 +52,7 @@ const protocol: IProtocolInformation = {
 		presence: false,
 		reply: true,
 		edit: true,
+		advancedRelay: true,
 	},
 	id: "vk", // an internal ID for the protocol, all lowercase
 	displayname: "VK", // a human-readable name of the protocol
