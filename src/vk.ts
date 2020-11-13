@@ -278,7 +278,6 @@ export class VkPuppet {
 					source: {
 						value: data.url,
 						filename: data.filename,
-						contentType: 
 					},
 				});
 				log.info("File sent", attachment);
@@ -289,7 +288,16 @@ export class VkPuppet {
 				});
 				await this.puppet.eventSync.insert(room, data.eventId!, response.toString());
 			} catch (err) {
-				log.error("Error sending to vk", err.error || err.body || err);
+				try {
+					const response = await p.client.api.messages.send({
+						peer_id: Number(room.roomId),
+						message: `File ${data.filename} was sent, but VK refused to recieve it. You may download it there:\n${data.url}`,
+						random_id: new Date().getTime(),
+					});
+					await this.puppet.eventSync.insert(room, data.eventId!, response.toString());
+				} catch (err) {
+					log.error("Error sending to vk", err.error || err.body || err);
+				}
 			}
 		} else {
 			try {
