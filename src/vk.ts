@@ -11,10 +11,11 @@ import {
 	ISendingUser,
 } from "mx-puppet-bridge";
 
-import { VK, MessageContext, Context, AttachmentType } from "vk-io";
+import { VK, MessageContext, Context, AttachmentType, MessageForwardsCollection } from "vk-io";
 import { userInfo } from "os";
 import { runInThisContext } from "vm";
 import { lookup } from "dns";
+import { Converter } from "showdown";
 
 // here we create our log instance
 const log = new Log("VKPuppet:vk");
@@ -35,6 +36,13 @@ interface IEchoPuppets {
 
 export class VkPuppet {
 	private puppets: IEchoPuppets = {};
+	private converter: Converter = new Converter({
+		simplifiedAutoLink: true,
+		excludeTrailingPunctuationFromURLs: true,
+		strikethrough: true,
+		simpleLineBreaks: true,
+		requireSpaceBeforeHeadingText: true,
+	});
 	constructor(
 		private puppet: PuppetBridge,
 	) { }
@@ -62,15 +70,18 @@ export class VkPuppet {
 				userId: userId.toString(),
 				name: info[0].name,
 				avatarUrl: info[0].photo_200,
+				externalUrl: `https://vk.com/${info[0].screen_name}`,
 			};
 			return response;
 		} else {
-			const info = await p.client.api.users.get({ user_ids: userId.toString(), fields: ["photo_max"] });
+			const info = await p.client.api.users.get({ user_ids: userId.toString(), fields: ["photo_max", "screen_name"] });
+			log.info(info[0]);
 			const response: IRemoteUser = {
 				puppetId,
 				userId: userId.toString(),
 				name: `${info[0].first_name} ${info[0].last_name}`,
 				avatarUrl: info[0].photo_max,
+				externalUrl: `https://vk.com/${info[0].screen_name}`,
 			};
 			return response;
 		}
@@ -400,6 +411,31 @@ export class VkPuppet {
 			}
 		}
 	}
+	
+	public async handleMatrixTyping(
+		room: IRemoteRoom,
+		typing: boolean,
+		asUser: ISendingUser | null,
+		event: any,
+	) {
+		log.info("Got typing", typing);
+
+		if (typing) {
+			log.info("Got typing");
+			const p = this.puppets[room.puppetId];
+			if (!p) {
+				return null;
+			}
+			try {
+				const response = await p.client.api.messages.setActivity({
+					peer_id: Number(room.roomId),
+					type: "typing",
+				})
+			} catch (err) {
+				log.error("Error sending typing presence to vk", err.error || err.body || err)
+			}
+		}
+	}
 
 	public async createRoom(room: IRemoteRoom): Promise<IRemoteRoom | null> {
 		const p = this.puppets[room.puppetId];
@@ -428,11 +464,16 @@ export class VkPuppet {
 		const params = await this.getSendParams(puppetId, context.peerId, context.senderId,
 			context.conversationMessageId?.toString() || context.id.toString());
 
-		if (context.hasText) {
+		if (context.hasText || context.hasForwards) {
+			let msgText: string = context.text || "";
+			if (context.hasForwards) {
+				msgText = await this.appendForwards(puppetId, msgText, context.forwards);
+			}
 			if (context.hasReplyMessage) {
 				if (this.puppet.eventSync.getMatrix(params.room, context.replyMessage!.id.toString())) {
 					const opts: IMessageEvent = {
-						body: context.text || "Attachment",
+						body: msgText || "Attachment",
+						formattedBody: this.converter.makeHtml(msgText),
 					};
 					// We got referenced message in room, using matrix reply
 					await this.puppet.sendReply(params, context.replyMessage!.id.toString(), opts);
@@ -440,7 +481,7 @@ export class VkPuppet {
 					// Using a fallback
 					const opts: IMessageEvent = {
 						body: await this.prependReply(
-							puppetId, context.text || "",
+							puppetId, msgText || "",
 							context.replyMessage?.text || "",
 							context.senderId.toString(),
 						),
@@ -449,7 +490,8 @@ export class VkPuppet {
 				}
 			} else {
 				const opts: IMessageEvent = {
-					body: context.text || "Attachment",
+					body: msgText || "Attachment",
+					formattedBody: this.converter.makeHtml(msgText),
 				};
 				await this.puppet.sendMessage(params, opts);
 			}
@@ -532,7 +574,7 @@ export class VkPuppet {
 		const replySplitted = reply.split("\n");
 		let formatted: string = `> <${user.name}>\n`;
 		replySplitted.forEach((element) => {
-			formatted += `> ${element}`;
+			formatted += `> ${element}\n`;
 		});
 		formatted += `\n\n${body}`;
 		return formatted;
@@ -550,5 +592,43 @@ export class VkPuppet {
 			}
 		}
 		return (splitted.join("\n").trim());
+	}
+
+	public async appendForwards(puppetId: number, body: string, forwards: MessageForwardsCollection) {
+		let formatted = `${body}\n`;
+		for (const f of forwards) {
+			const user = await this.getRemoteUser(puppetId, Number(f.senderId));
+			formatted += `> <[${user.name}](${user.externalUrl})>\n`
+			f.text?.split("\n").forEach((element) => {
+				formatted += `> ${element}\n`;
+			})
+			if (f.hasAttachments()) {
+				f.attachments.forEach((attachment) => {
+					switch (attachment.type) {
+						case AttachmentType.PHOTO:
+							formatted += `> 🖼️ [Photo](${attachment["largeSizeUrl"]})\n`
+							break;
+						case AttachmentType.STICKER:
+							formatted += `> 🖼️ [Sticker](${attachment["imagesWithBackground"][4]["url"]})\n`
+							break;
+						case AttachmentType.AUDIO_MESSAGE:
+							formatted += `> 🗣️ [Audio message](${attachment["oggUrl"]})\n`
+							break;
+						case AttachmentType.DOCUMENT:
+							formatted += `> 📁 [File ${attachment["title"]}](${attachment["url"]})\n`
+							break;
+						default:
+							break;
+					}
+				})
+			}
+			if (f.hasForwards) {
+				(await this.appendForwards(puppetId, "", f.forwards)).trim().split("\n").forEach((element) => {
+					formatted += `> ${element}\n`;
+				})
+			}
+			formatted += "\n";
+		}
+		return formatted;
 	}
 }

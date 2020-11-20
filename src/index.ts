@@ -49,7 +49,7 @@ const protocol: IProtocolInformation = {
 	features: {
 		image: true,
 		file: true,
-		presence: false,
+		presence: true,
 		reply: true,
 		edit: true,
 		advancedRelay: true,
@@ -94,6 +94,8 @@ async function run() {
 	puppet.on("reply", vk.handleMatrixReply.bind(vk));
 	puppet.on("image", vk.handleMatrixImage.bind(vk));
 	puppet.on("file", vk.handleMatrixFile.bind(vk));
+
+	puppet.on("typing", vk.handleMatrixTyping.bind(vk));
 
 	puppet.setCreateRoomHook(vk.createRoom.bind(vk));
 	// required: get description hook

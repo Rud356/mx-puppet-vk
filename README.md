@@ -21,14 +21,14 @@ Register that one with synapse and start the bridge with `npm run start`.
     - [x] Audio/Video content
     - [x] Other files
     - [x] Replies
-    - [ ] Typing notifs - not possible yet
-    - [ ] Presence - not possible yet
-    - [ ] Read notifications - not possible yet
+    - [ ] Typing notifs - Synapse 1.22.0 or later required
+    - [ ] Presence - ~~not possible yet~~
+    - [ ] Read notifications - ~~not possible yet~~
     - [x] Message edits
     - [x] Message redacts - works as edit, real redact unavailable without being admin in chat
 - VK -> Matrix
     - [x] Text content
-    - [ ] Forwards
+    - [x] Forwards
     - [x] Image content
     - [x] Audio content
     - [ ] Video content
