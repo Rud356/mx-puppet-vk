@@ -40,6 +40,10 @@ Register that one with synapse and start the bridge with `npm run start`.
     - [ ] Read notifications - not effective to track
     - [x] Message edits
     - [ ] Message redacts - doesn't work
+- Edge cases to work around
+    - [ ] Access token revoked on VK side
+    - [ ] Bot is kicked out on VK side
+    - Probably more, send an issue!
 
 ## Usage
 
