@@ -21,7 +21,7 @@ Register that one with synapse and start the bridge with `npm run start`.
     - [x] Audio/Video content
     - [x] Other files
     - [x] Replies
-    - [ ] Typing notifs - Synapse 1.22.0 or later required
+    - [ ] Typing notifs - [see note](###Note-on-presence-from-matrix-side)
     - [ ] Presence - ~~not possible yet~~
     - [ ] Read notifications - ~~not possible yet~~
     - [x] Message edits
@@ -62,3 +62,13 @@ Bridge doesn't handle being kicked from chat yet.
 ### Relay usage
 
 See [mx-puppet-bridge docs](https://github.com/Sorunome/mx-puppet-bridge#relay-mode)
+
+### Note on presence from matrix side
+
+For presence bridging from Matrix side (including typing) your Synapse server has to be on 1.22.0 or later.
+
+Also, make sure your registration file contains this:
+
+```
+de.sorunome.msc2409.push_ephemeral: true
+```
