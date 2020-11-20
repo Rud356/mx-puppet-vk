@@ -42,6 +42,9 @@ Register that one with synapse and start the bridge with `npm run start`.
     - [ ] Message redacts - doesn't work
 
 ## Usage
+
+[Video demonstration by Coma Grayce](https://youtu.be/nBRBUA9beXs)
+
 1. Get VK community token (Just open the "Manage community" tab, go to "API usage" tab and click "Create token")
 2. Activate Bots Long Poll API ("Manage community" → "API usage" → "Bots Long Poll API") and choose the latest API version. Make sure that under event types all message-realted events are turned on.
 3. Activate an option to message your community. To allow group chats, activate it under bot capabilities.
