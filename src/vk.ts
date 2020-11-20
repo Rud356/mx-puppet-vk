@@ -62,7 +62,7 @@ export class VkPuppet {
 
 	public async getRemoteUser(puppetId: number, userId: number): Promise<IRemoteUser> {
 		const p = this.puppets[puppetId];
-		// log.info("User id:", userId, userId.toString());
+		// log.debug("User id:", userId, userId.toString());
 		if (userId < 0) {
 			const info = await p.client.api.groups.getById({ group_id: Math.abs(userId).toString() });
 			const response: IRemoteUser = {
@@ -75,7 +75,6 @@ export class VkPuppet {
 			return response;
 		} else {
 			const info = await p.client.api.users.get({ user_ids: userId.toString(), fields: ["photo_max", "screen_name"] });
-			log.info(info[0]);
 			const response: IRemoteUser = {
 				puppetId,
 				userId: userId.toString(),
@@ -90,7 +89,6 @@ export class VkPuppet {
 	public async getRemoteRoom(puppetId: number, peerId: number): Promise<IRemoteRoom> {
 		const p = this.puppets[puppetId];
 		const info = await p.client.api.messages.getConversationsById({ peer_ids: peerId, fields: ["photo_max"] });
-		// log.info(info.items[0]);
 		let response: IRemoteRoom;
 		switch (info.items[0]?.peer.type || "chat") {
 			case "user":
@@ -254,7 +252,7 @@ export class VkPuppet {
 			const displayname = (new TextEncoder().encode(asUser.displayname));
 			asUser.displayname = (new TextDecoder().decode(displayname.slice(0, MAX_NAME_LENGTH)));
 		}
-		// usually you'd send it here to the remote protocol via the client object
+
 		try {
 			await this.handleMatrixEdit(room, eventId, { body: "[ДАННЫЕ УДАЛЕНЫ]", eventId }, asUser);
 			// broken in chats without admin access
@@ -411,17 +409,16 @@ export class VkPuppet {
 			}
 		}
 	}
-	
+
+	// Never called on my server for some reason, but
+	// if being called, should work
 	public async handleMatrixTyping(
 		room: IRemoteRoom,
 		typing: boolean,
 		asUser: ISendingUser | null,
 		event: any,
 	) {
-		log.info("Got typing", typing);
-
 		if (typing) {
-			log.info("Got typing");
 			const p = this.puppets[room.puppetId];
 			if (!p) {
 				return null;
@@ -430,9 +427,9 @@ export class VkPuppet {
 				const response = await p.client.api.messages.setActivity({
 					peer_id: Number(room.roomId),
 					type: "typing",
-				})
+				});
 			} catch (err) {
-				log.error("Error sending typing presence to vk", err.error || err.body || err)
+				log.error("Error sending typing presence to vk", err.error || err.body || err);
 			}
 		}
 	}
@@ -456,7 +453,7 @@ export class VkPuppet {
 		if (!p) {
 			return;
 		}
-		log.info("Received new message!", context);
+		log.debug("Received new message!", context);
 		if (context.isOutbox) {
 			return; // Deduping
 		}
@@ -598,34 +595,34 @@ export class VkPuppet {
 		let formatted = `${body}\n`;
 		for (const f of forwards) {
 			const user = await this.getRemoteUser(puppetId, Number(f.senderId));
-			formatted += `> <[${user.name}](${user.externalUrl})>\n`
+			formatted += `> <[${user.name}](${user.externalUrl})>\n`;
 			f.text?.split("\n").forEach((element) => {
 				formatted += `> ${element}\n`;
-			})
+			});
 			if (f.hasAttachments()) {
 				f.attachments.forEach((attachment) => {
 					switch (attachment.type) {
 						case AttachmentType.PHOTO:
-							formatted += `> 🖼️ [Photo](${attachment["largeSizeUrl"]})\n`
+							formatted += `> 🖼️ [Photo](${attachment["largeSizeUrl"]})\n`;
 							break;
 						case AttachmentType.STICKER:
-							formatted += `> 🖼️ [Sticker](${attachment["imagesWithBackground"][4]["url"]})\n`
+							formatted += `> 🖼️ [Sticker](${attachment["imagesWithBackground"][4]["url"]})\n`;
 							break;
 						case AttachmentType.AUDIO_MESSAGE:
-							formatted += `> 🗣️ [Audio message](${attachment["oggUrl"]})\n`
+							formatted += `> 🗣️ [Audio message](${attachment["oggUrl"]})\n`;
 							break;
 						case AttachmentType.DOCUMENT:
-							formatted += `> 📁 [File ${attachment["title"]}](${attachment["url"]})\n`
+							formatted += `> 📁 [File ${attachment["title"]}](${attachment["url"]})\n`;
 							break;
 						default:
 							break;
 					}
-				})
+				});
 			}
 			if (f.hasForwards) {
 				(await this.appendForwards(puppetId, "", f.forwards)).trim().split("\n").forEach((element) => {
 					formatted += `> ${element}\n`;
-				})
+				});
 			}
 			formatted += "\n";
 		}
