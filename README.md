@@ -1,4 +1,4 @@
-[![Matrix](https://img.shields.io/matrix/mx-puppet-vk:inex.rocks?logo=matrix&server_fqdn=matrix.inex.rocks)](https://matrix.to/#/#mx-puppet-vk:inex.rocks?via=inex.rocks&via=sunbutt.faith)
+[![Matrix](https://img.shields.io/matrix/mx-puppet-vk:sunbutt.faith?logo=matrix&server_fqdn=gospel.sunbutt.faith)](https://matrix.to/#/#mx-puppet-vk:inex.rocks?via=inex.rocks&via=sunbutt.faith)
 
 # mx-puppet-vk
 This is a Matrix <-> VK bridge based on [mx-puppet-bridge](https://github.com/Sorunome/mx-puppet-bridge) and [VK-IO](https://github.com/negezor/vk-io).
