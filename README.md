@@ -28,6 +28,7 @@ Register that one with synapse and start the bridge with `npm run start`.
     - [ ] Read notifications - ~~not possible yet~~
     - [x] Message edits
     - [x] Message redacts - works as edit, real redact unavailable without being admin in chat
+    - [ ] Initiate rooms from the matrix side
 - VK -> Matrix
     - [x] Text content
     - [x] Forwards
@@ -42,10 +43,13 @@ Register that one with synapse and start the bridge with `npm run start`.
     - [ ] Read notifications - not effective to track
     - [x] Message edits
     - [ ] Message redacts - doesn't work
+    - [ ] Autopopulate rooms with users
 - Edge cases to work around
     - [ ] Access token revoked on VK side
     - [ ] Bot is kicked out on VK side
     - Probably more, send an issue!
+- Support for user tokens
+    - [ ] Auth as a user instead of group
 
 ## Usage
 
