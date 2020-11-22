@@ -163,12 +163,23 @@ export class VkPuppet {
 				await this.puppet.setUserTyping(params, context.isTyping);
 			}
 		});
-		data.id = Number((await client.api.groups.getById({}))[0].id) * -1;
+		try {
+			await client.api.groups.getById({});
+			log.info("Got group token");
+			data.isUserToken = false;
+		} catch (err) {
+			log.info("Got user token");
+			data.isUserToken = true;
+		}
 		this.puppets[puppetId] = {
 			client,
 			data,
 		};
-		await client.updates.start();
+		try {
+			await client.updates.start();
+		} catch (err) {
+			log.error("Failed to initialize update listener", err)
+		}
 	}
 
 	public async deletePuppet(puppetId: number) {
@@ -210,7 +221,7 @@ export class VkPuppet {
 				random_id: new Date().getTime(),
 			});
 			await this.puppet.eventSync.insert(room, data.eventId!,
-				response[0]["conversation_message_id"].toString());
+				p.data.isUserToken ? response[0]["message_id"].toString() : response[0]["conversation_message_id"].toString());
 		} catch (err) {
 			log.error("Error sending to vk", err.error || err.body || err);
 		}
@@ -231,10 +242,12 @@ export class VkPuppet {
 		try {
 			const response = await p.client.api.messages.edit({
 				peer_id: Number(room.roomId),
-				conversation_message_id: Number(eventId),
+				conversation_message_id: p.data.isUserToken ? undefined : Number(eventId),
+				message_id: p.data.isUserToken ? Number(eventId) : undefined,
 				message: asUser ? `${asUser.displayname}: ${data.body}` : data.body,
 				random_id: new Date().getTime(),
 			});
+			log.info("SYNC Matrix edit", response);
 			await this.puppet.eventSync.insert(room, data.eventId!, response.toString());
 		} catch (err) {
 			log.error("Error sending edit to vk", err.error || err.body || err);
@@ -254,13 +267,12 @@ export class VkPuppet {
 		}
 
 		try {
-			await this.handleMatrixEdit(room, eventId, { body: "[ДАННЫЕ УДАЛЕНЫ]", eventId }, asUser);
-			// broken in chats without admin access
-			/*await p.client.api.messages.delete({
+			p.data.isUserToken ? await p.client.api.messages.delete({
 				spam: 0,
 				delete_for_all: 1,
 				message_ids: Number(eventId),
-			});*/
+			})
+			: await this.handleMatrixEdit(room, eventId, { body: "[ДАННЫЕ УДАЛЕНЫ]", eventId }, asUser);
 		} catch (err) {
 			log.error("Error sending edit to vk", err.error || err.body || err);
 		}
@@ -290,10 +302,11 @@ export class VkPuppet {
 				peer_ids: Number(room.roomId),
 				message: asUser ? `${asUser.displayname}:  ${await this.stripReply(data.body)}` : await this.stripReply(data.body),
 				random_id: new Date().getTime(),
-				forward: `{"peer_id":${Number(room.roomId)},"conversation_message_ids":${Number(eventId)},"is_reply": true}`,
+				forward: p.data.isUserToken ? undefined : `{"peer_id":${Number(room.roomId)},"conversation_message_ids":${Number(eventId)},"is_reply": true}`,
+				reply_to: p.data.isUserToken ? Number(room.roomId) : undefined,
 			});
 			await this.puppet.eventSync.insert(room, data.eventId!,
-				response[0]["conversation_message_id"].toString());
+				p.data.isUserToken ? response[0]["message_id"].toString() : response[0]["conversation_message_id"].toString());
 		} catch (err) {
 			log.error("Error sending to vk", err.error || err.body || err);
 		}
@@ -334,7 +347,7 @@ export class VkPuppet {
 					attachment: [`photo${attachment.ownerId}_${attachment.id}`],
 				});
 				await this.puppet.eventSync.insert(room, data.eventId!,
-					response[0]["conversation_message_id"].toString());
+					p.data.isUserToken ? response[0]["message_id"].toString() : response[0]["conversation_message_id"].toString());
 			} catch (err) {
 				log.error("Error sending to vk", err.error || err.body || err);
 			}
@@ -390,7 +403,7 @@ export class VkPuppet {
 						random_id: new Date().getTime(),
 					});
 					await this.puppet.eventSync.insert(room, data.eventId!,
-						response[0]["conversation_message_id"].toString());
+						p.data.isUserToken ? response[0]["message_id"].toString() : response[0]["conversation_message_id"].toString());
 				} catch (err) {
 					log.error("Error sending to vk", err.error || err.body || err);
 				}
@@ -403,7 +416,7 @@ export class VkPuppet {
 					random_id: new Date().getTime(),
 				});
 				await this.puppet.eventSync.insert(room, data.eventId!,
-					response[0]["conversation_message_id"].toString());
+					p.data.isUserToken ? response[0]["message_id"].toString() : response[0]["conversation_message_id"].toString());
 			} catch (err) {
 				log.error("Error sending to vk", err.error || err.body || err);
 			}
@@ -459,7 +472,7 @@ export class VkPuppet {
 		}
 
 		const params = await this.getSendParams(puppetId, context.peerId, context.senderId,
-			context.conversationMessageId?.toString() || context.id.toString());
+			p.data.isUserToken ? context.id.toString() : context.conversationMessageId?.toString() || context.id.toString());
 
 		if (context.hasText || context.hasForwards) {
 			let msgText: string = context.text || "";
@@ -548,8 +561,14 @@ export class VkPuppet {
 		if (!p) {
 			return;
 		}
+		log.info(context);
 		// As VK always sends edit as outbox, we won't work with any edits from groups
-		if (context.senderType === "group") {
+		if (!p.data.isUserToken && context.senderType === "group") {
+			return; // Deduping
+		}
+
+		// With users it works ok
+		if (p.data.isUserToken && context.isOutbox === true) {
 			return; // Deduping
 		}
 

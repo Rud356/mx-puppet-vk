@@ -48,8 +48,6 @@ Register that one with synapse and start the bridge with `npm run start`.
     - [ ] Access token revoked on VK side
     - [ ] Bot is kicked out on VK side
     - Probably more, send an issue!
-- Support for user tokens
-    - [ ] Auth as a user instead of group
 
 ## Usage
 
@@ -78,3 +76,44 @@ Also, make sure your registration file contains this:
 ```
 de.sorunome.msc2409.push_ephemeral: true
 ```
+
+## Using a user token instead of group bot
+
+This is experimental and is not the main goal of this bridge.
+
+To get a user token, use something like this:
+
+```
+https://oauth.vk.com/authorize?client_id=<CLIENT_ID>&display=page&redirect_uri=https://oauth.vk.com/blank.html&scope=friends,messages,offline,docs,photos,video'&response_type=token&v=5.126
+```
+
+- Matrix -> VK (AS A USER)
+    - [x] Text content
+    - [x] Image content
+    - [x] Audio/Video content
+    - [x] Other files
+    - [x] Replies
+    - [ ] Typing notifs
+    - [ ] Presence
+    - [ ] Read notifications
+    - [x] Message edits
+    - [x] Message redacts - in 24 hours
+    - [ ] Initiate rooms from the matrix side
+- VK (AS A USER) -> Matrix
+    - [x] Auth as a user instead of group
+    - [x] Text content
+    - [x] Forwards
+    - [ ] Image content
+    - [ ] Audio content
+    - [ ] Video content
+    - [ ] Stickers
+    - [ ] Other files
+    - [ ] Presence
+    - [x] Typing notifs
+    - [x] User profiles
+    - [ ] Read notifications
+    - [x] Message edits
+    - [ ] Message redacts
+    - [ ] Autopopulate rooms with users
+
+To avoid imposture, do **not** use relay mode with user tokens!
