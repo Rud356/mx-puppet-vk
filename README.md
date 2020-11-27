@@ -5,7 +5,7 @@ This is a Matrix <-> VK bridge based on [mx-puppet-bridge](https://github.com/So
 
 Это мост между Matrix и Вконтакте, основанный на [mx-puppet-bridge](https://github.com/Sorunome/mx-puppet-bridge) и [VK-IO](https://github.com/negezor/vk-io).
 
-[Документация на русском ниже.](#Docs-in-Russian)
+[Документация на русском ниже.](#docs-in-russian)
 
 It is in early development. Right now it logs message data when log level includes "info" level.
 
@@ -128,7 +128,7 @@ To avoid imposture, do **not** use relay mode with user tokens!
 
 Находится в ранней разработке. Содержание сообщений выводится в логи, если уровень логов включает в себя уровень "info".
 
-Режим релея работает, но мы его не рекоммендуем.
+Режим релея работает, но мы его не рекомендуем.
 
 ## Установка
 ```bash
@@ -146,7 +146,7 @@ npm run build
     - [x] Аудио и видео
     - [x] Прочие файлы
     - [x] Ответы
-    - [x] Индикатор печати - [смотрите примечание](#Примечание-о-эфемерных-событиях)
+    - [x] Индикатор печати - [смотрите примечание](#примечание-о-эфемерных-событиях)
     - [ ] Индикатор "в сети"
     - [ ] Индикаторы прочтения
     - [x] Редактирование сообщений
