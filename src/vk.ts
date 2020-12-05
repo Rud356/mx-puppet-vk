@@ -178,7 +178,7 @@ export class VkPuppet {
 		try {
 			await client.updates.start();
 		} catch (err) {
-			log.error("Failed to initialize update listener", err)
+			log.error("Failed to initialize update listener", err);
 		}
 	}
 
@@ -303,7 +303,7 @@ export class VkPuppet {
 				message: asUser ? `${asUser.displayname}:  ${await this.stripReply(data.body)}` : await this.stripReply(data.body),
 				random_id: new Date().getTime(),
 				forward: p.data.isUserToken ? undefined : `{"peer_id":${Number(room.roomId)},"conversation_message_ids":${Number(eventId)},"is_reply": true}`,
-				reply_to: p.data.isUserToken ? Number(room.roomId) : undefined,
+				reply_to: p.data.isUserToken ? Number(eventId) : undefined,
 			});
 			await this.puppet.eventSync.insert(room, data.eventId!,
 				p.data.isUserToken ? response[0]["message_id"].toString() : response[0]["conversation_message_id"].toString());
