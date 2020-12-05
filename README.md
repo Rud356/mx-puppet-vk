@@ -107,11 +107,11 @@ https://oauth.vk.com/authorize?client_id=<CLIENT_ID>&display=page&redirect_uri=h
     - [x] Auth as a user instead of group
     - [x] Text content
     - [x] Forwards
-    - [ ] Image content
-    - [ ] Audio content
-    - [ ] Video content
-    - [ ] Stickers
-    - [ ] Other files
+    - [x] Image content
+    - [ ] Audio content - unavailable via user tokens
+    - [ ] Video content - unavailable via user tokens
+    - [x] Stickers
+    - [x] Other files
     - [ ] Presence
     - [x] Typing notifs
     - [x] User profiles
@@ -223,11 +223,11 @@ https://oauth.vk.com/authorize?client_id=<CLIENT_ID>&display=page&redirect_uri=h
 - Вконтакте (как пользователь) -> Matrix
     - [x] Текстовые сообщения
     - [x] Пересланные сообщения
-    - [ ] Изображения
-    - [ ] Аудио
-    - [ ] Видео
-    - [ ] Стикеры
-    - [ ] Прочие файлы
+    - [x] Изображения
+    - [ ] Аудио - недоступно через токен пользователя
+    - [ ] Видео - недоступно через токен пользователя
+    - [x] Стикеры
+    - [x] Прочие файлы
     - [ ] Индикатор "в сети"
     - [x] Индикатор печати
     - [x] Имена и аватарки пользователей

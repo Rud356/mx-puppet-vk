@@ -507,11 +507,39 @@ export class VkPuppet {
 			}
 		}
 		if (context.hasAttachments()) {
-			for (const f of context.attachments) {
+			const attachments = p.data.isUserToken
+				? (await p.client.api.messages.getById({message_ids: context.id})).items[0].attachments!
+				: context.attachments;
+			for (const f of attachments) {
 				switch (f.type) {
 					case AttachmentType.PHOTO:
 						try {
-							await this.puppet.sendFileDetect(params, f["largeSizeUrl"]);
+							if (p.data.isUserToken) {
+								// VK API is weird. Very weird.
+								let url: string = "";
+								f["photo"]["sizes"].forEach((element) => {
+									if (element["type"] === "w") {
+										url = element["url"] || "";
+									}
+								});
+								if (url === "") {
+									f["photo"]["sizes"].forEach((element) => {
+										if (element["type"] === "z") {
+											url = element["url"] || "";
+										}
+									});
+								}
+								if (url === undefined) {
+									f["photo"]["sizes"].forEach((element) => {
+										if (element["type"] === "y") {
+											url = element["url"];
+										}
+									});
+								}
+								await this.puppet.sendFileDetect(params, url);
+							} else {
+								await this.puppet.sendFileDetect(params, f["largeSizeUrl"]);
+							}
 						} catch (err) {
 							const opts: IMessageEvent = {
 								body: `Image was sent: ${f["largeSizeUrl"]}`,
@@ -521,7 +549,8 @@ export class VkPuppet {
 						break;
 					case AttachmentType.STICKER:
 						try {
-							await this.puppet.sendFileDetect(params, f["imagesWithBackground"][4]["url"]);
+							p.data.isUserToken ? await this.puppet.sendFileDetect(params, f["sticker"]["images_with_background"][4]["url"])
+							: await this.puppet.sendFileDetect(params, f["imagesWithBackground"][4]["url"]);
 						} catch (err) {
 							const opts: IMessageEvent = {
 								body: `Sticker was sent: ${f["imagesWithBackground"][4]["url"]}`,
@@ -541,7 +570,8 @@ export class VkPuppet {
 						break;
 					case AttachmentType.DOCUMENT:
 						try {
-							await this.puppet.sendFileDetect(params, f["url"], f["title"]);
+							p.data.isUserToken ? await this.puppet.sendFileDetect(params, f["doc"]["url"], f["doc"]["title"])
+							: await this.puppet.sendFileDetect(params, f["url"], f["title"]);
 						} catch (err) {
 							const opts: IMessageEvent = {
 								body: `Document was sent: ${f["url"]}`,
