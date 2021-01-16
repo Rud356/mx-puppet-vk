@@ -57,7 +57,7 @@ Register that one with synapse and start the bridge with `npm run start`.
 
 [Video demonstration by Coma Grayce](https://youtu.be/nBRBUA9beXs)
 
-1. Get VK community token (Just open the "Manage community" tab, go to "API usage" tab and click "Create token")
+1. Get VK community token (Just open the "Manage community" tab, go to "API usage" tab and click "Create token"). Token must have community control and message permissions.
 2. Activate Bots Long Poll API ("Manage community" → "API usage" → "Bots Long Poll API") and choose the latest API version. Make sure that under event types all message-realted events are turned on.
 3. Activate an option to message your community. To allow group chats, activate it under bot capabilities.
 4. On matrix, contact `@_vk_puppet_bot:your.domain` and type `link <vk token>`
@@ -176,7 +176,7 @@ npm run build
 
 [Видео демонстрация от Coma Grayce](https://youtu.be/nBRBUA9beXs)
 
-1. Получите токен сообщества Вконтакте. Откройте раздел «Управление сообществом» («Управление страницей», если у Вас публичная страница), выберите вкладку «Работа с API» и нажмите «Создать ключ доступа». Не забудьте предоставить доступ к сообщениям.
+1. Получите токен сообщества Вконтакте. Откройте раздел «Управление сообществом» («Управление страницей», если у Вас публичная страница), выберите вкладку «Работа с API» и нажмите «Создать ключ доступа». Не забудьте предоставить доступ к сообщениям и **управлению сообществом**.
 2. Активируйте Long Poll API (откройте раздел «Управление сообществом», на вкладке «Работа с API» → «Long Poll API» выберите «Включён») и выберите самую актуальную версию API, так как по умолчанию выбрана устаревшая, с ней не работает. Убедитесь, что во вкладке типов событий выбраны все события в категории сообщений.
 3. Во вкладке сообщений, активируйте сообщения сообщества. Чтобы позволить добавлять сообщества в групповые чаты, активируйте это во вкладке возможностей ботов.
 4. В matrix, напишите боту `@_vk_puppet_bot:ваш.домен` и напишите `link <токен вк>`
