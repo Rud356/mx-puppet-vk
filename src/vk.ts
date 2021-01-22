@@ -137,7 +137,7 @@ export class VkPuppet {
 		// and listen to incoming messages from it
 		try {
 			const client = new VK({ token: data.token, apiLimit: 20 });
-			log.info("Trying to init listener with", data.token);
+			log.debug("Trying to init listener with", data.token);
 
 			client.updates.on("message_new", async (context) => {
 				try {
