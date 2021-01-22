@@ -90,7 +90,7 @@ You can select some of popular applications for reuse the `CLIENT_ID` via [VKhos
 
 Example of URL to generate `access_token`:
 ```
-https://oauth.vk.com/authorize?client_id=<CLIENT_ID>&display=page&redirect_uri=https://oauth.vk.com/blank.html&scope=friends,messages,offline,docs,photos,video'&response_type=token&v=5.126
+https://oauth.vk.com/authorize?client_id=<CLIENT_ID>&display=page&redirect_uri=https://oauth.vk.com/blank.html&scope=friends,messages,offline,docs,photos,video&response_type=token&v=5.126
 ```
 You must review grant access list and allow access for selected `CLIENT_ID`. After pressing "Allow" you browser will be redirected to other URL.
 
@@ -224,7 +224,7 @@ _Этот режим является экспериментальным и не
 
 Пример URL для генерации `access_token`:
 ```
-https://oauth.vk.com/authorize?client_id=<CLIENT_ID>&display=page&redirect_uri=https://oauth.vk.com/blank.html&scope=friends,messages,offline,docs,photos,video'&response_type=token&v=5.126
+https://oauth.vk.com/authorize?client_id=<CLIENT_ID>&display=page&redirect_uri=https://oauth.vk.com/blank.html&scope=friends,messages,offline,docs,photos,video&response_type=token&v=5.126
 ```
 Вы должны перепроверить список доступа дя выбранного `CLIENT_ID` и разрешиь доступ. После нажатия кнопки "Разрешить" ваш браузер переадресует вас на другой URL.
 
