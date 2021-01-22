@@ -56,7 +56,7 @@ const protocol: IProtocolInformation = {
 	},
 	id: "vk", // an internal ID for the protocol, all lowercase
 	displayname: "VK", // a human-readable name of the protocol
-	externalUrl: "https://github.com/innereq/mx-puppet-vk", // A URL about your protocol
+	externalUrl: "https://vk.com/", // A URL about your protocol
 };
 
 // next we create the puppet class.
