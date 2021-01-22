@@ -135,50 +135,63 @@ export class VkPuppet {
 		}
 		// usually we create a client class of some sorts to the remote protocol
 		// and listen to incoming messages from it
-		const client = new VK({ token: data.token, apiLimit: 20 });
-		log.info("Trying to init listener with", data.token);
+		try {
+			const client = new VK({ token: data.token, apiLimit: 20 });
+			log.info("Trying to init listener with", data.token);
 
-		client.updates.on("message_new", async (context) => {
+			client.updates.on("message_new", async (context) => {
+				try {
+					log.info("Recieved something!");
+					await this.handleVkMessage(puppetId, context);
+				} catch (err) {
+					log.error("Error handling vk message event", err.error || err.body || err);
+				}
+			});
+			client.updates.on("message_edit", async (context) => {
+				try {
+					log.info("Edit recieved!");
+					await this.handleVkEdit(puppetId, context);
+				} catch (err) {
+					log.error("Error handling vk message event", err.error || err.body || err);
+				}
+			});
+			client.updates.on("message_typing_state", async (context) => {
+				if (context.isUser) {
+					const params = await this.getSendParams(puppetId, context.fromId, context.fromId);
+					await this.puppet.setUserTyping(params, context.isTyping);
+				} else {
+					const params = await this.getSendParams(puppetId, 2000000000 + (context?.chatId ?? 0), context.fromId);
+					await this.puppet.setUserTyping(params, context.isTyping);
+				}
+			});
 			try {
-				log.info("Recieved something!");
-				await this.handleVkMessage(puppetId, context);
+				const linkedGroupInfo = await client.api.groups.getById({});
+				log.info("Got group token");
+				data.isUserToken = false;
+				data.username = linkedGroupInfo[0].name;
+				data.id = linkedGroupInfo[0].id;
 			} catch (err) {
-				log.error("Error handling vk message event", err.error || err.body || err);
+				log.info("Got user token");
+				data.isUserToken = true;
+				const linkedUserInfo = await client.api.account.getProfileInfo({});
+				data.username = `${linkedUserInfo.first_name} ${linkedUserInfo.last_name}`;
+				data.id = linkedUserInfo.id;
 			}
-		});
-		client.updates.on("message_edit", async (context) => {
+			this.puppets[puppetId] = {
+				client,
+				data,
+			};
+			await this.puppet.setUserId(puppetId, data.id);
+			await this.puppet.setPuppetData(puppetId, data);
 			try {
-				log.info("Edit recieved!");
-				await this.handleVkEdit(puppetId, context);
+				await client.updates.start();
+				await this.puppet.sendStatusMessage(puppetId, "Connected!");
 			} catch (err) {
-				log.error("Error handling vk message event", err.error || err.body || err);
+				await this.puppet.sendStatusMessage(puppetId, `Connection failed! ${err}`);
+				log.error("Failed to initialize update listener", err);
 			}
-		});
-		client.updates.on("message_typing_state", async (context) => {
-			if (context.isUser) {
-				const params = await this.getSendParams(puppetId, context.fromId, context.fromId);
-				await this.puppet.setUserTyping(params, context.isTyping);
-			} else {
-				const params = await this.getSendParams(puppetId, 2000000000 + (context?.chatId ?? 0), context.fromId);
-				await this.puppet.setUserTyping(params, context.isTyping);
-			}
-		});
-		try {
-			await client.api.groups.getById({});
-			log.info("Got group token");
-			data.isUserToken = false;
 		} catch (err) {
-			log.info("Got user token");
-			data.isUserToken = true;
-		}
-		this.puppets[puppetId] = {
-			client,
-			data,
-		};
-		try {
-			await client.updates.start();
-		} catch (err) {
-			log.error("Failed to initialize update listener", err);
+			await this.puppet.sendStatusMessage(puppetId, `Connection failed! ${err}`);
 		}
 	}
 

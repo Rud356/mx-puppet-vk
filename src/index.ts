@@ -103,7 +103,19 @@ async function run() {
 	puppet.setGetDescHook(async (puppetId: number, data: any): Promise<string> => {
 		// here we receive the puppet ID and the data associated with that puppet
 		// we are expected to return a displayable name for that particular puppet
-		return `VK puppet ${data.name}`;
+		let s = "VK";
+		if (data.isUserToken) {
+			s += " as user";
+		} else {
+			s += " as group";
+		}
+		if (data.username) {
+			s += ` ${data.username}`;
+		}
+		if (data.id) {
+			s += ` (${data.id})`;
+		}
+		return s;
 	});
 	// required: get data from string hook
 	puppet.setGetDataFromStrHook(async (str: string): Promise<IRetData> => {
