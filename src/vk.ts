@@ -581,6 +581,16 @@ export class VkPuppet {
 							await this.puppet.sendMessage(params, opts);
 						}
 						break;
+					case AttachmentType.AUDIO:
+						try {
+							await this.puppet.sendAudio(params, f["url"]);
+						} catch (err) {
+							const opts: IMessageEvent = {
+								body: `Music was sent: ${f["title"]} by ${f["artist"]} ${f["url"]}`,
+							};
+							await this.puppet.sendMessage(params, opts);
+						}
+						break;
 					case AttachmentType.DOCUMENT:
 						try {
 							p.data.isUserToken ? await this.puppet.sendFileDetect(params, f["doc"]["url"], f["doc"]["title"])
