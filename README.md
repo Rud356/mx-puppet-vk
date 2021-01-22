@@ -71,7 +71,7 @@ Bridge doesn't handle being kicked from chat yet.
 
 See [mx-puppet-bridge docs](https://github.com/Sorunome/mx-puppet-bridge#relay-mode)
 
-### Note on presence from matrix side
+### Note on presence from Matrix side
 
 For presence bridging from Matrix side (including typing) your Synapse server has to be on 1.22.0 or later.
 
@@ -81,15 +81,29 @@ Also, make sure your registration file contains this:
 de.sorunome.msc2409.push_ephemeral: true
 ```
 
-## Using a user token instead of group bot
+## Usage as User puppet, for bridge all personal messages and chats
 
-This is experimental and is not the main goal of this bridge.
+_This is experimental and is not the main goal of this bridge._
 
-To get a user token, use something like this:
+1. Select the `CLIENT_ID` - it is ID of registered application, that allowed to access your messages. You can register your own application (and [require access for Messages API](https://vk.com/dev/messages_api) from VK owners), or reuse ID of already registered application. 
+You can select some of popular applications for reuse the `CLIENT_ID` via [VKhost](https://vkhost.github.io/) service.
 
+Example of URL to generate `access_token`:
 ```
-https://oauth.vk.com/authorize?client_id=<CLIENT_ID>&display=page&redirect_uri=https://oauth.vk.com/blank.html&scope=friends,messages,offline,docs,photos,video'&response_type=token&v=5.126
+https://oauth.vk.com/authorize?client_id=<CLIENT_ID>&display=page&redirect_uri=https://oauth.vk.com/blank.html&scope=friends,messages,offline,docs,photos,video&response_type=token&v=5.126
 ```
+You must review grant access list and allow access for selected `CLIENT_ID`. After pressing "Allow" you browser will be redirected to other URL.
+
+2. Get the generated `access_token` string from redirected URL via looking the `&access_token=` GET parameter, here is example of url:
+```
+https://oauth.vk.com/blank.html#access_token=df89482ba9a19e5a2dee85031612b021a08cd521115e1c7d2cd70710a50783105cfeae7386ab4f1003b54&expires_in=0&user_id=12345&email=vasya@example.com
+```
+where the access token is `df89482ba9a19e5a2dee85031612b021a08cd521115e1c7d2cd70710a50783105cfeae7386ab4f1003b54` (don't use it, it is only example).
+
+3. On Matrix client, create private chat with `@_vk_puppet_bot:your.domain` user and type `link <access_token>` command.
+
+
+### Implemented features using a user token instead of group bot:
 
 - Matrix -> VK (AS A USER)
     - [x] Text content
@@ -198,15 +212,28 @@ npm run build
 de.sorunome.msc2409.push_ephemeral: true
 ```
 
-## Использования токена пользователя вместо сообщества
+## Использование токена пользователя для доступа ко всем персональным сообщениям и чатам конкретного пользователя
 
-Это экспериментально и не является оригинальной целью моста.
+_Этот режим является экспериментальным и не является основной целью данного моста._
 
-Чтобы получить токен пользователя, можете использовать сервис [vkhost.github.io](https://vkhost.github.io) или вручную выполнить запрос как этот:
+1. Выберите `CLIENT_ID` - это идентификатор приложения, которому предоставлен доступ к сообщениям пользователя. Вы можете зарегистрировать своё личное приложение (и [запросить доступ к Messages API](https://vk.com/dev/messages_api) от админов ВК), или переиспользовать ID от уже зарегистрированного приложения.
+Вы можете выбрать одно из популярных приложений для переиспользования `CLIENT_ID` через сервис [VKhost](https://vkhost.github.io/).
 
+Пример URL для генерации `access_token`:
 ```
-https://oauth.vk.com/authorize?client_id=<CLIENT_ID>&display=page&redirect_uri=https://oauth.vk.com/blank.html&scope=friends,messages,offline,docs,photos,video'&response_type=token&v=5.126
+https://oauth.vk.com/authorize?client_id=<CLIENT_ID>&display=page&redirect_uri=https://oauth.vk.com/blank.html&scope=friends,messages,offline,docs,photos,video&response_type=token&v=5.126
 ```
+Вы должны перепроверить список доступа дя выбранного `CLIENT_ID` и разрешиь доступ. После нажатия кнопки "Разрешить" ваш браузер переадресует вас на другой URL.
+
+2. Скопируйте текст сгенерированного `access_token` с переадресованного URL через просмотр GET-параметра `&access_token=`, вот пример URL:
+```
+https://oauth.vk.com/blank.html#access_token=df89482ba9a19e5a2dee85031612b021a08cd521115e1c7d2cd70710a50783105cfeae7386ab4f1003b54&expires_in=0&user_id=12345&email=vasya@example.com
+```
+в котором access_token это `df89482ba9a19e5a2dee85031612b021a08cd521115e1c7d2cd70710a50783105cfeae7386ab4f1003b54` (не используйте данный токен, это только пример).
+
+3. В Матрикс-клиенте создайте приватный чат с пользователем `@_vk_puppet_bot:your.domain` и отправьте команду `link <access_token>`, заменив "<access_token>" на сгенерированный токен доступа.
+
+### Реализованные функции для режима персонального токена пользователя:
 
 - Matrix -> Вконтакте (как пользователь)
     - [x] Текстовые сообщения
