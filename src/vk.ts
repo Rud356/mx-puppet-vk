@@ -100,6 +100,7 @@ export class VkPuppet {
 					name: `${userInfo[0].first_name} ${userInfo[0].last_name}`,
 					avatarUrl: userInfo[0].photo_max,
 					isDirect: true,
+					externalUrl: `https://vk.com/id${info.items[0].peer.id}}`,
 				};
 				break;
 
@@ -110,6 +111,17 @@ export class VkPuppet {
 					name: info.items[0]?.chat_settings.title || `VK chat №${(peerId - 2000000000).toString()}`,
 					topic: info.count === 0 ? "To recieve chat name and avatar, puppet needs admin rights on VK side" : null,
 					avatarUrl: info.items[0]?.chat_settings.photo?.photo_200,
+				};
+				break;
+
+			case "group":
+				const groupInfo = await p.client.api.groups.getById({ group_id: info.items[0].peer.id });
+				response = {
+					puppetId,
+					roomId: peerId.toString(),
+					name: groupInfo[0].name || peerId.toString(),
+					avatarUrl: groupInfo[0]?.photo_200,
+					externalUrl: `https://vk.com/${groupInfo[0].screen_name}`,
 				};
 				break;
 
@@ -285,7 +297,7 @@ export class VkPuppet {
 				delete_for_all: 1,
 				message_ids: Number(eventId),
 			})
-			: await this.handleMatrixEdit(room, eventId, { body: "[ДАННЫЕ УДАЛЕНЫ]", eventId }, asUser);
+				: await this.handleMatrixEdit(room, eventId, { body: "[ДАННЫЕ УДАЛЕНЫ]", eventId }, asUser);
 		} catch (err) {
 			log.error("Error sending edit to vk", err.error || err.body || err);
 		}
@@ -521,7 +533,7 @@ export class VkPuppet {
 		}
 		if (context.hasAttachments()) {
 			const attachments = p.data.isUserToken
-				? (await p.client.api.messages.getById({message_ids: context.id})).items[0].attachments!
+				? (await p.client.api.messages.getById({ message_ids: context.id })).items[0].attachments!
 				: context.attachments;
 			for (const f of attachments) {
 				switch (f.type) {
@@ -563,7 +575,7 @@ export class VkPuppet {
 					case AttachmentType.STICKER:
 						try {
 							p.data.isUserToken ? await this.puppet.sendFileDetect(params, f["sticker"]["images_with_background"][4]["url"])
-							: await this.puppet.sendFileDetect(params, f["imagesWithBackground"][4]["url"]);
+								: await this.puppet.sendFileDetect(params, f["imagesWithBackground"][4]["url"]);
 						} catch (err) {
 							const opts: IMessageEvent = {
 								body: `Sticker was sent: ${f["imagesWithBackground"][4]["url"]}`,
@@ -594,7 +606,7 @@ export class VkPuppet {
 					case AttachmentType.DOCUMENT:
 						try {
 							p.data.isUserToken ? await this.puppet.sendFileDetect(params, f["doc"]["url"], f["doc"]["title"])
-							: await this.puppet.sendFileDetect(params, f["url"], f["title"]);
+								: await this.puppet.sendFileDetect(params, f["url"], f["title"]);
 						} catch (err) {
 							const opts: IMessageEvent = {
 								body: `Document was sent: ${f["url"]}`,
