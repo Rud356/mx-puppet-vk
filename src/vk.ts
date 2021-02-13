@@ -16,6 +16,7 @@ import { userInfo } from "os";
 import { runInThisContext } from "vm";
 import { lookup } from "dns";
 import { Converter } from "showdown";
+import { MessagesMessageAttachment } from "vk-io/lib/api/schemas/objects";
 
 // here we create our log instance
 const log = new Log("VKPuppet:vk");
@@ -614,7 +615,25 @@ export class VkPuppet {
 							await this.puppet.sendMessage(params, opts);
 						}
 						break;
+					case AttachmentType.LINK:
+						await this.puppet.sendMessage(params, {
+							body: `Link was sent: ${f["url"]}`,
+						});
+						break;
+					case AttachmentType.WALL:
+						await this.puppet.sendMessage(params, {
+							body: await this.renderWallPost(puppetId, f),
+						});
+						break;
+					case AttachmentType.WALL_REPLY:
+						await this.puppet.sendMessage(params, {
+							body: await this.renderWallPost(puppetId, f),
+						});
+						break;
 					default:
+						await this.puppet.sendMessage(params, {
+							body: `Unhandled attachment of type ${f.type}`,
+						});
 						break;
 				}
 			}
@@ -698,7 +717,11 @@ export class VkPuppet {
 						case AttachmentType.DOCUMENT:
 							formatted += `> 📁 [File ${attachment["title"]}](${attachment["url"]})\n`;
 							break;
+						case AttachmentType.LINK:
+							formatted += `> 🔗 [ ${attachment["title"] ? attachment["title"] : attachment["url"]} ](${attachment["url"]})\n`;
+							break;
 						default:
+							formatted += `> ❓️ Unhandled attachment of type ${attachment.type}\n`;
 							break;
 					}
 				});
@@ -709,6 +732,39 @@ export class VkPuppet {
 				});
 			}
 			formatted += "\n";
+		}
+		return formatted;
+	}
+
+	public async renderWallPost(puppetId: number, post: MessagesMessageAttachment) {
+		const user = await this.getRemoteUser(puppetId, Number(post.fromId));
+		let formatted = `Forwarded post from [${user.name}](${user.externalUrl})\n`;
+		post.text?.split("\n").forEach((element) => {
+			formatted += `> ${element}\n`;
+		});
+		if (post.hasAttachments()) {
+			post.attachments.forEach((attachment) => {
+				switch (attachment.type) {
+					case AttachmentType.PHOTO:
+						formatted += `> 🖼️ [Photo](${attachment["largeSizeUrl"]})\n`;
+						break;
+					case AttachmentType.STICKER:
+						formatted += `> 🖼️ [Sticker](${attachment["imagesWithBackground"][4]["url"]})\n`;
+						break;
+					case AttachmentType.AUDIO_MESSAGE:
+						formatted += `> 🗣️ [Audio message](${attachment["oggUrl"]})\n`;
+						break;
+					case AttachmentType.DOCUMENT:
+						formatted += `> 📁 [File ${attachment["title"]}](${attachment["url"]})\n`;
+						break;
+					case AttachmentType.LINK:
+						formatted += `> 🔗 [ ${attachment["title"] ? attachment["title"] : attachment["url"]} ](${attachment["url"]})\n`;
+						break;
+					default:
+						formatted += `> ❓️ Unhandled attachment of type ${attachment.type}\n`;
+						break;
+				}
+			});
 		}
 		return formatted;
 	}
