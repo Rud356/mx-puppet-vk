@@ -116,7 +116,7 @@ export class VkPuppet {
 				break;
 
 			case "group":
-				const groupInfo = await p.client.api.groups.getById({ group_id: info.items[0].peer.id });
+				const groupInfo = await p.client.api.groups.getById({ group_id: Math.abs(info.items[0].peer.id).toString() });
 				response = {
 					puppetId,
 					roomId: peerId.toString(),
