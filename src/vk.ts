@@ -543,24 +543,25 @@ export class VkPuppet {
 							if (p.data.isUserToken) {
 								// VK API is weird. Very weird.
 								let url: string = "";
-								f["photo"]["sizes"].forEach((element) => {
-									if (element["type"] === "w") {
-										url = element["url"] || "";
+								// Trying to find max size of image
+								let widthMax: number = 0;
+								let widthMaxUrl: string = "";
+								let heightMax: number = 0;
+								let heightMaxUrl: string = "";
+								f["photo"]["sizes"].forEach((photoSize) => {
+									if (photoSize["width"] > widthMax) {
+										widthMax = photoSize["width"];
+										widthMaxUrl = photoSize["url"];
+									}
+									if (photoSize["height"] > widthMax) {
+										heightMax = photoSize["height"];
+										heightMaxUrl = photoSize["url"];
 									}
 								});
-								if (url === "") {
-									f["photo"]["sizes"].forEach((element) => {
-										if (element["type"] === "z") {
-											url = element["url"] || "";
-										}
-									});
-								}
-								if (url === undefined) {
-									f["photo"]["sizes"].forEach((element) => {
-										if (element["type"] === "y") {
-											url = element["url"];
-										}
-									});
+								if (widthMax > 0 && widthMax > heightMax) {
+									url = widthMaxUrl;
+								} else {
+									url = heightMaxUrl;
 								}
 								await this.puppet.sendFileDetect(params, url);
 							} else {
@@ -568,7 +569,7 @@ export class VkPuppet {
 							}
 						} catch (err) {
 							const opts: IMessageEvent = {
-								body: `Image was sent: ${f["largeSizeUrl"]}`,
+								body: `Image: ${f["image"]["largeSizeUrl"]}`,
 							};
 							await this.puppet.sendMessage(params, opts);
 						}
@@ -579,7 +580,7 @@ export class VkPuppet {
 								: await this.puppet.sendFileDetect(params, f["imagesWithBackground"][4]["url"]);
 						} catch (err) {
 							const opts: IMessageEvent = {
-								body: `Sticker was sent: ${f["imagesWithBackground"][4]["url"]}`,
+								body: `Sticker: ${f["imagesWithBackground"][4]["url"]}`,
 							};
 							await this.puppet.sendMessage(params, opts);
 						}
@@ -589,7 +590,7 @@ export class VkPuppet {
 							await this.puppet.sendAudio(params, f["oggUrl"]);
 						} catch (err) {
 							const opts: IMessageEvent = {
-								body: `Audio message was sent: ${f["url"]}`,
+								body: `Audio message: ${f["url"]}`,
 							};
 							await this.puppet.sendMessage(params, opts);
 						}
@@ -599,7 +600,7 @@ export class VkPuppet {
 							await this.puppet.sendAudio(params, f["url"]);
 						} catch (err) {
 							const opts: IMessageEvent = {
-								body: `Music was sent: ${f["title"]} by ${f["artist"]} ${f["url"]}`,
+								body: `Audio: ${f["title"]} by ${f["artist"]} ${f["url"]}`,
 							};
 							await this.puppet.sendMessage(params, opts);
 						}
@@ -610,14 +611,14 @@ export class VkPuppet {
 								: await this.puppet.sendFileDetect(params, f["url"], f["title"]);
 						} catch (err) {
 							const opts: IMessageEvent = {
-								body: `Document was sent: ${f["url"]}`,
+								body: `Document: ${f["url"]}`,
 							};
 							await this.puppet.sendMessage(params, opts);
 						}
 						break;
 					case AttachmentType.LINK:
 						await this.puppet.sendMessage(params, {
-							body: `Link was sent: ${f["url"]}`,
+							body: `Link: ${f["link"]["url"]}`,
 						});
 						break;
 					case AttachmentType.WALL:
