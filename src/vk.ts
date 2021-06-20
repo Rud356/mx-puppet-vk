@@ -557,7 +557,7 @@ export class VkPuppet {
 								if (url === "") {
 									log.error(`Image not found in ${f["photo"]}`);
 								};
-
+								log.debug(`images: ${imagesFromBiggestToSmallest}`)
 								await this.puppet.sendFileDetect(params, url);
 							} else {
 								await this.puppet.sendFileDetect(params, f["largeSizeUrl"]);
