@@ -17,6 +17,7 @@ import { runInThisContext } from "vm";
 import { lookup } from "dns";
 import { Converter } from "showdown";
 import { MessagesMessageAttachment } from "vk-io/lib/api/schemas/objects";
+import { ElementFlags } from "typescript";
 
 // here we create our log instance
 const log = new Log("VKPuppet:vk");
@@ -487,6 +488,13 @@ export class VkPuppet {
 	// VK -> Matrix section //
 	//////////////////////////
 
+	public attachedImagesSizeComparator(photo_1: MessagesMessageAttachment, photo_2: MessagesMessageAttachment): Boolean {
+		// Biggest image will be first one we will get
+		let sum_size_1 = photo_1['width'] + photo_1['height'];
+		let sum_size_2 = photo_2['width'] + photo_2['height'];
+		return sum_size_1 < sum_size_2;
+	};
+
 	public async handleVkMessage(puppetId: number, context: MessageContext) {
 		const p = this.puppets[puppetId];
 		if (!p) {
@@ -536,32 +544,20 @@ export class VkPuppet {
 			const attachments = p.data.isUserToken
 				? (await p.client.api.messages.getById({ message_ids: context.id })).items[0].attachments!
 				: context.attachments;
+
 			for (const f of attachments) {
 				switch (f.type) {
 					case AttachmentType.PHOTO:
 						try {
 							if (p.data.isUserToken) {
 								// VK API is weird. Very weird.
-								let url: string = "";
-								f["photo"]["sizes"].forEach((element) => {
-									if (element["type"] === "w") {
-										url = element["url"] || "";
-									}
-								});
+								let imagesFromBiggestToSmallest = f["photo"]["sizes"].sort(this.attachedImagesSizeComparator);
+								let url: string = imagesFromBiggestToSmallest[0]['url'] || "";
+
 								if (url === "") {
-									f["photo"]["sizes"].forEach((element) => {
-										if (element["type"] === "z") {
-											url = element["url"] || "";
-										}
-									});
-								}
-								if (url === undefined) {
-									f["photo"]["sizes"].forEach((element) => {
-										if (element["type"] === "y") {
-											url = element["url"];
-										}
-									});
-								}
+									log.error(`Image not found in ${f["photo"]}`);
+								};
+
 								await this.puppet.sendFileDetect(params, url);
 							} else {
 								await this.puppet.sendFileDetect(params, f["largeSizeUrl"]);
@@ -573,6 +569,7 @@ export class VkPuppet {
 							await this.puppet.sendMessage(params, opts);
 						}
 						break;
+
 					case AttachmentType.STICKER:
 						try {
 							p.data.isUserToken ? await this.puppet.sendFileDetect(params, f["sticker"]["images_with_background"][4]["url"])
@@ -584,6 +581,7 @@ export class VkPuppet {
 							await this.puppet.sendMessage(params, opts);
 						}
 						break;
+
 					case AttachmentType.AUDIO_MESSAGE:
 						try {
 							await this.puppet.sendAudio(params, f["oggUrl"]);
@@ -594,6 +592,7 @@ export class VkPuppet {
 							await this.puppet.sendMessage(params, opts);
 						}
 						break;
+
 					case AttachmentType.AUDIO:
 						try {
 							await this.puppet.sendAudio(params, f["url"]);
@@ -604,6 +603,7 @@ export class VkPuppet {
 							await this.puppet.sendMessage(params, opts);
 						}
 						break;
+
 					case AttachmentType.DOCUMENT:
 						try {
 							p.data.isUserToken ? await this.puppet.sendFileDetect(params, f["doc"]["url"], f["doc"]["title"])
@@ -615,21 +615,25 @@ export class VkPuppet {
 							await this.puppet.sendMessage(params, opts);
 						}
 						break;
+
 					case AttachmentType.LINK:
 						await this.puppet.sendMessage(params, {
 							body: `Link was sent: ${f["url"]}`,
 						});
 						break;
+
 					case AttachmentType.WALL:
 						await this.puppet.sendMessage(params, {
 							body: await this.renderWallPost(puppetId, f),
 						});
 						break;
+
 					case AttachmentType.WALL_REPLY:
 						await this.puppet.sendMessage(params, {
 							body: await this.renderWallPost(puppetId, f),
 						});
 						break;
+
 					default:
 						await this.puppet.sendMessage(params, {
 							body: `Unhandled attachment of type ${f.type}`,
