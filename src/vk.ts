@@ -17,7 +17,7 @@ import { runInThisContext } from "vm";
 import { lookup } from "dns";
 import { Converter } from "showdown";
 import { MessagesMessageAttachment } from "vk-io/lib/api/schemas/objects";
-import { ElementFlags } from "typescript";
+import { ElementFlags, OptionalTypeNode } from "typescript";
 
 // here we create our log instance
 const log = new Log("VKPuppet:vk");
@@ -495,6 +495,21 @@ export class VkPuppet {
 		return sum_size_1 < sum_size_2;
 	};
 
+	public getBiggestImageUrl(images: Array<object>): any {
+		let maxImageResolution = 0;
+		let biggestImage: any = null;
+		images.forEach(
+			function(image: object) {
+				if (maxImageResolution < (image["width"] + image["height"])) {
+					maxImageResolution = image["width"] + image["height"];
+					biggestImage = image;
+				}
+			}
+		);
+
+		return biggestImage
+	};
+
 	public async handleVkMessage(puppetId: number, context: MessageContext) {
 		const p = this.puppets[puppetId];
 		if (!p) {
@@ -551,13 +566,14 @@ export class VkPuppet {
 						try {
 							if (p.data.isUserToken) {
 								// VK API is weird. Very weird.
-								let imagesFromBiggestToSmallest = f["photo"]["sizes"].sort(this.attachedImagesSizeComparator);
-								let url: string = imagesFromBiggestToSmallest[0]['url'] || "";
+								let biggestImage = this.getBiggestImageUrl(
+									f["photo"]["sizes"]
+								);
+								let url: string = biggestImage['url'] || "";
 
 								if (url === "") {
 									log.error(`Image not found in ${f["photo"]}`);
 								};
-								log.debug(`images: ${imagesFromBiggestToSmallest}`)
 								await this.puppet.sendFileDetect(params, url);
 							} else {
 								await this.puppet.sendFileDetect(params, f["largeSizeUrl"]);
