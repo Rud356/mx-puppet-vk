@@ -492,7 +492,7 @@ export class VkPuppet {
 		// Biggest image will be first one we will get
 		let sum_size_1 = photo_1['width'] + photo_1['height'];
 		let sum_size_2 = photo_2['width'] + photo_2['height'];
-		return sum_size_1 < sum_size_2;
+		return sum_size_1 > sum_size_2;
 	};
 
 	public async handleVkMessage(puppetId: number, context: MessageContext) {
