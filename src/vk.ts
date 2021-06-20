@@ -495,7 +495,7 @@ export class VkPuppet {
 		return sum_size_1 < sum_size_2;
 	};
 
-	public getBiggestImageUrl(images: Array<object>): any {
+	public getBiggestImage(images: Array<object>): any {
 		let maxImageResolution = 0;
 		let biggestImage: any = null;
 		images.forEach(
@@ -507,7 +507,7 @@ export class VkPuppet {
 			}
 		);
 
-		return biggestImage
+		return biggestImage;
 	};
 
 	public async handleVkMessage(puppetId: number, context: MessageContext) {
@@ -566,7 +566,7 @@ export class VkPuppet {
 						try {
 							if (p.data.isUserToken) {
 								// VK API is weird. Very weird.
-								let biggestImage = this.getBiggestImageUrl(
+								let biggestImage = this.getBiggestImage(
 									f["photo"]["sizes"]
 								);
 								let url: string = biggestImage['url'] || "";
