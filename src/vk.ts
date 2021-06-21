@@ -488,13 +488,6 @@ export class VkPuppet {
 	// VK -> Matrix section //
 	//////////////////////////
 
-	public attachedImagesSizeComparator(photo_1: MessagesMessageAttachment, photo_2: MessagesMessageAttachment): Boolean {
-		// Biggest image will be first one we will get
-		let sum_size_1 = photo_1['width'] + photo_1['height'];
-		let sum_size_2 = photo_2['width'] + photo_2['height'];
-		return sum_size_1 < sum_size_2;
-	};
-
 	public getBiggestImage(images: Array<object>): any {
 		let maxImageResolution = 0;
 		let biggestImage: any = null;
