@@ -488,20 +488,18 @@ export class VkPuppet {
 	// VK -> Matrix section //
 	//////////////////////////
 
-	public getBiggestImage(images: Array<object>): any {
+	public getBiggestImage(images: object[]): object {
 		let maxImageResolution = 0;
-		let biggestImage: any = null;
-		images.forEach(
-			function(image: object) {
-				if (maxImageResolution < (image["width"] + image["height"])) {
-					maxImageResolution = image["width"] + image["height"];
-					biggestImage = image;
-				}
+		let biggestImage: object = {};
+		images.forEach((image: object) => {
+			if (maxImageResolution < (image["width"] + image["height"])) {
+				maxImageResolution = image["width"] + image["height"];
+				biggestImage = image;
 			}
-		);
+		});
 
 		return biggestImage;
-	};
+	}
 
 	public async handleVkMessage(puppetId: number, context: MessageContext) {
 		const p = this.puppets[puppetId];
@@ -559,14 +557,12 @@ export class VkPuppet {
 						try {
 							if (p.data.isUserToken) {
 								// VK API is weird. Very weird.
-								let biggestImage = this.getBiggestImage(
-									f["photo"]["sizes"]
-								);
-								let url: string = biggestImage['url'] || "";
+								const biggestImage = this.getBiggestImage(f["photo"]["sizes"]);
+								const url: string = biggestImage["url"] || "";
 
 								if (url === "") {
 									log.error(`Image not found in ${f["photo"]}`);
-								};
+								}
 								await this.puppet.sendFileDetect(params, url);
 							} else {
 								await this.puppet.sendFileDetect(params, f["largeSizeUrl"]);
