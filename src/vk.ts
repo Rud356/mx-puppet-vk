@@ -17,6 +17,7 @@ import { runInThisContext } from "vm";
 import { lookup } from "dns";
 import { Converter } from "showdown";
 import { MessagesMessageAttachment } from "vk-io/lib/api/schemas/objects";
+import { ElementFlags, OptionalTypeNode } from "typescript";
 
 // here we create our log instance
 const log = new Log("VKPuppet:vk");
@@ -487,6 +488,21 @@ export class VkPuppet {
 	// VK -> Matrix section //
 	//////////////////////////
 
+	public getBiggestImage(images: Array<object>): any {
+		let maxImageResolution = 0;
+		let biggestImage: any = null;
+		images.forEach(
+			function(image: object) {
+				if (maxImageResolution < (image["width"] + image["height"])) {
+					maxImageResolution = image["width"] + image["height"];
+					biggestImage = image;
+				}
+			}
+		);
+
+		return biggestImage;
+	};
+
 	public async handleVkMessage(puppetId: number, context: MessageContext) {
 		const p = this.puppets[puppetId];
 		if (!p) {
@@ -536,33 +552,21 @@ export class VkPuppet {
 			const attachments = p.data.isUserToken
 				? (await p.client.api.messages.getById({ message_ids: context.id })).items[0].attachments!
 				: context.attachments;
+
 			for (const f of attachments) {
 				switch (f.type) {
 					case AttachmentType.PHOTO:
 						try {
 							if (p.data.isUserToken) {
 								// VK API is weird. Very weird.
-								let url: string = "";
-								// Trying to find max size of image
-								let widthMax: number = 0;
-								let widthMaxUrl: string = "";
-								let heightMax: number = 0;
-								let heightMaxUrl: string = "";
-								f["photo"]["sizes"].forEach((photoSize) => {
-									if (photoSize["width"] > widthMax) {
-										widthMax = photoSize["width"];
-										widthMaxUrl = photoSize["url"];
-									}
-									if (photoSize["height"] > widthMax) {
-										heightMax = photoSize["height"];
-										heightMaxUrl = photoSize["url"];
-									}
-								});
-								if (widthMax > 0 && widthMax > heightMax) {
-									url = widthMaxUrl;
-								} else {
-									url = heightMaxUrl;
-								}
+								let biggestImage = this.getBiggestImage(
+									f["photo"]["sizes"]
+								);
+								let url: string = biggestImage['url'] || "";
+
+								if (url === "") {
+									log.error(`Image not found in ${f["photo"]}`);
+								};
 								await this.puppet.sendFileDetect(params, url);
 							} else {
 								await this.puppet.sendFileDetect(params, f["largeSizeUrl"]);
@@ -574,6 +578,7 @@ export class VkPuppet {
 							await this.puppet.sendMessage(params, opts);
 						}
 						break;
+
 					case AttachmentType.STICKER:
 						try {
 							p.data.isUserToken ? await this.puppet.sendFileDetect(params, f["sticker"]["images_with_background"][4]["url"])
@@ -585,6 +590,7 @@ export class VkPuppet {
 							await this.puppet.sendMessage(params, opts);
 						}
 						break;
+
 					case AttachmentType.AUDIO_MESSAGE:
 						try {
 							await this.puppet.sendAudio(params, f["oggUrl"]);
@@ -595,6 +601,7 @@ export class VkPuppet {
 							await this.puppet.sendMessage(params, opts);
 						}
 						break;
+
 					case AttachmentType.AUDIO:
 						try {
 							await this.puppet.sendAudio(params, f["url"]);
@@ -605,6 +612,7 @@ export class VkPuppet {
 							await this.puppet.sendMessage(params, opts);
 						}
 						break;
+
 					case AttachmentType.DOCUMENT:
 						try {
 							p.data.isUserToken ? await this.puppet.sendFileDetect(params, f["doc"]["url"], f["doc"]["title"])
@@ -616,21 +624,25 @@ export class VkPuppet {
 							await this.puppet.sendMessage(params, opts);
 						}
 						break;
+
 					case AttachmentType.LINK:
 						await this.puppet.sendMessage(params, {
 							body: `Link: ${f["link"]["url"]}`,
 						});
 						break;
+
 					case AttachmentType.WALL:
 						await this.puppet.sendMessage(params, {
 							body: await this.renderWallPost(puppetId, f),
 						});
 						break;
+
 					case AttachmentType.WALL_REPLY:
 						await this.puppet.sendMessage(params, {
 							body: await this.renderWallPost(puppetId, f),
 						});
 						break;
+
 					default:
 						await this.puppet.sendMessage(params, {
 							body: `Unhandled attachment of type ${f.type}`,
