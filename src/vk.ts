@@ -723,6 +723,9 @@ export class VkPuppet {
 						case AttachmentType.AUDIO_MESSAGE:
 							formatted += `> 🗣️ [Audio message](${attachment["oggUrl"]})\n`;
 							break;
+						case AttachmentType.AUDIO:
+							formatted += `> 🗣️ [Audio message](${attachment["oggUrl"] ?? attachment["url"]})\n`;
+							break;
 						case AttachmentType.DOCUMENT:
 							formatted += `> 📁 [File ${attachment["title"]}](${attachment["url"]})\n`;
 							break;
@@ -762,6 +765,9 @@ export class VkPuppet {
 						break;
 					case AttachmentType.AUDIO_MESSAGE:
 						formatted += `> 🗣️ [Audio message](${attachment["oggUrl"]})\n`;
+						break;
+					case AttachmentType.AUDIO:
+						formatted += `> 🗣️ [Audio](${attachment["oggUrl"] ?? attachment["url"]})\n`;
 						break;
 					case AttachmentType.DOCUMENT:
 						formatted += `> 📁 [File ${attachment["title"]}](${attachment["url"]})\n`;
