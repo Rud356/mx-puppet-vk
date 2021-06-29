@@ -691,9 +691,9 @@ export class VkPuppet {
 					log.debug(context);
 				}
 			}
-
+			
+			// TODO: fix handling of replies somehow because they aren't sending replies in matrix in user mode at all
 			if (context.hasReplyMessage) {
-				log.debug(params.room, context.replyMessage!.id);
 				if (this.puppet.eventSync.getMatrix(params.room, context.replyMessage!.id.toString())) {
 					const opts: IMessageEvent = {
 						body: msgText || "Attachment",
@@ -702,7 +702,6 @@ export class VkPuppet {
 					// We got referenced message in room, using matrix reply
 					await this.puppet.sendReply(params, context.replyMessage!.id.toString(), opts);
 				} else {
-					log.debug("Fallback in message reply", params)
 					// Using a fallback
 					const opts: IMessageEvent = {
 						body: await this.prependReply(
