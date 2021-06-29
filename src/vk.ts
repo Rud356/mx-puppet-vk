@@ -665,21 +665,6 @@ export class VkPuppet {
 	// VK -> Matrix section //
 	//////////////////////////
 
-	public getBiggestImage(images: Array<object>): any {
-		let maxImageResolution = 0;
-		let biggestImage: any = null;
-		images.forEach(
-			function(image: object) {
-				if (maxImageResolution < (image["width"] + image["height"])) {
-					maxImageResolution = image["width"] + image["height"];
-					biggestImage = image;
-				}
-			}
-		);
-
-		return biggestImage;
-	};
-
 	public async handleVkMessage(puppetId: number, context: MessageContext) {
 		const p = this.puppets[puppetId];
 		if (!p) {
@@ -699,10 +684,16 @@ export class VkPuppet {
 		if (context.hasText || context.hasForwards) {
 			let msgText: string = context.text || "";
 			if (context.hasForwards) {
-				msgText = await attachmentHandler.handleForwards(this, puppetId, msgText, params, context.forwards);
+				try {
+					msgText = await attachmentHandler.handleForwards(this, puppetId, msgText, params, context.forwards);
+				} catch (err) {
+					log.error(err);
+					log.debug(context);
+				}
 			}
 
 			if (context.hasReplyMessage) {
+				log.debug(params.room, context.replyMessage!.id);
 				if (this.puppet.eventSync.getMatrix(params.room, context.replyMessage!.id.toString())) {
 					const opts: IMessageEvent = {
 						body: msgText || "Attachment",
@@ -711,6 +702,7 @@ export class VkPuppet {
 					// We got referenced message in room, using matrix reply
 					await this.puppet.sendReply(params, context.replyMessage!.id.toString(), opts);
 				} else {
+					log.debug("Fallback in message reply", params)
 					// Using a fallback
 					const opts: IMessageEvent = {
 						body: await this.prependReply(
