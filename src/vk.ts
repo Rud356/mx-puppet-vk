@@ -501,8 +501,6 @@ export class VkPuppet {
 			asUser.displayname = (new TextDecoder().decode(displayname.slice(0, MAX_NAME_LENGTH)));
 		}
 
-		log.debug("Reply display name", asUser?.displayname);
-		log.debug("As user:", asUser)
 		try {
 			const response = await p.client.api.messages.send({
 				peer_ids: Number(room.roomId),
