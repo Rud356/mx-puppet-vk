@@ -159,6 +159,57 @@ export class AttachmentsHandler {
 		}
 	}
 
+	public async handleForwards(
+		vkPuppet: VkPuppet, puppetId: number, message_body: string,
+		params: IReceiveParams, forwards: MessageForwardsCollection
+	) {
+		let formatted = `${message_body}\n`;
+		log.debug("Forawrded messages", forwards);
+
+		for (const f of forwards) {
+			const user = await vkPuppet.getRemoteUser(puppetId, Number(f.senderId));
+			log.debug("Forwarder", user);
+			formatted += `> <[${user.name}](${user.externalUrl})>\n`;
+			f.text?.split("\n").forEach((element) => {
+				formatted += `> ${element}\n`;
+			});
+			if (f.hasAttachments()) {
+				f.attachments.forEach(async (attachment) => {
+					switch (attachment.type) {
+						case AttachmentType.PHOTO:
+							await this.handlePhotoAttachment(params, attachment);
+							break;
+						case AttachmentType.STICKER:
+							await this.handleStickerAttachment(params, attachment);
+							break;
+						case AttachmentType.AUDIO_MESSAGE:
+							await this.handleAudioMessage(params, attachment);
+							break;
+						case AttachmentType.DOCUMENT:
+							await this.handleDocument(params, attachment);
+							break;
+						case AttachmentType.LINK:
+							formatted += `> 🔗 [ ${attachment["title"] ? attachment["title"] : attachment["url"]} ](${attachment["url"]})\n`;
+							break;
+						default:
+							formatted += `> ❓️ Unhandled attachment of type ${attachment.type}\n`;
+							break;
+					}
+				});
+			}
+			if (f.hasForwards) {
+					(
+						await this.handleForwards(vkPuppet, puppetId, "", params, f.forwards)
+					).trim().split("\n").forEach((element) => {
+						formatted += `> ${element}\n`;
+					}
+				);
+			}
+			formatted += "\n";
+		}
+		return formatted;
+	}
+
 }
 
 
@@ -643,11 +694,12 @@ export class VkPuppet {
 
 		const params = await this.getSendParams(puppetId, context.peerId, context.senderId,
 			p.data.isUserToken ? context.id.toString() : context.conversationMessageId?.toString() || context.id.toString());
+		const attachmentHandler = new AttachmentsHandler(p, this.puppet);
 
 		if (context.hasText || context.hasForwards) {
 			let msgText: string = context.text || "";
 			if (context.hasForwards) {
-				msgText = await this.appendForwards(puppetId, msgText, context.forwards);
+				msgText = await attachmentHandler.handleForwards(this, puppetId, msgText, params, context.forwards);
 			}
 
 			if (context.hasReplyMessage) {
@@ -682,7 +734,6 @@ export class VkPuppet {
 			const attachments = p.data.isUserToken
 				? (await p.client.api.messages.getById({ message_ids: context.id })).items[0].attachments!
 				: context.attachments;
-			const attachmentHandler = new AttachmentsHandler(p, this.puppet);
 
 			for (const f of attachments) {
 				switch (f.type) {
@@ -786,48 +837,6 @@ export class VkPuppet {
 			}
 		}
 		return (splitted.join("\n").trim());
-	}
-
-	public async appendForwards(puppetId: number, body: string, forwards: MessageForwardsCollection) {
-		let formatted = `${body}\n`;
-		for (const f of forwards) {
-			const user = await this.getRemoteUser(puppetId, Number(f.senderId));
-			formatted += `> <[${user.name}](${user.externalUrl})>\n`;
-			f.text?.split("\n").forEach((element) => {
-				formatted += `> ${element}\n`;
-			});
-			if (f.hasAttachments()) {
-				f.attachments.forEach((attachment) => {
-					switch (attachment.type) {
-						case AttachmentType.PHOTO:
-							formatted += `> 🖼️ [Photo](${attachment["largeSizeUrl"]})\n`;
-							break;
-						case AttachmentType.STICKER:
-							formatted += `> 🖼️ [Sticker](${attachment["imagesWithBackground"][4]["url"]})\n`;
-							break;
-						case AttachmentType.AUDIO_MESSAGE:
-							formatted += `> 🗣️ [Audio message](${attachment["oggUrl"]})\n`;
-							break;
-						case AttachmentType.DOCUMENT:
-							formatted += `> 📁 [File ${attachment["title"]}](${attachment["url"]})\n`;
-							break;
-						case AttachmentType.LINK:
-							formatted += `> 🔗 [ ${attachment["title"] ? attachment["title"] : attachment["url"]} ](${attachment["url"]})\n`;
-							break;
-						default:
-							formatted += `> ❓️ Unhandled attachment of type ${attachment.type}\n`;
-							break;
-					}
-				});
-			}
-			if (f.hasForwards) {
-				(await this.appendForwards(puppetId, "", f.forwards)).trim().split("\n").forEach((element) => {
-					formatted += `> ${element}\n`;
-				});
-			}
-			formatted += "\n";
-		}
-		return formatted;
 	}
 
 	public async renderWallPost(puppetId: number, post: MessagesMessageAttachment) {
