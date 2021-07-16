@@ -36,6 +36,183 @@ interface IEchoPuppets {
 	[puppetId: number]: IEchoPuppet;
 }
 
+
+export class AttachmentsHandler {
+	private puppet: IEchoPuppet;
+	private puppetBridge: PuppetBridge;
+	constructor (puppet: IEchoPuppet, puppetBridge: PuppetBridge) {
+		this.puppet = puppet;
+		this.puppetBridge = puppetBridge;
+	}
+
+	public getBiggestImage(images: Array<object>): any {
+		let maxImageResolution = 0;
+		let biggestImage: any = null;
+		images.forEach(
+			function(image: object) {
+				if (maxImageResolution < (image["width"] + image["height"])) {
+					maxImageResolution = image["width"] + image["height"];
+					biggestImage = image;
+				}
+			}
+		);
+	
+		return biggestImage;
+	};
+
+	public async handlePhotoAttachment(params: IReceiveParams, attachment: MessagesMessageAttachment) {
+		try {
+			if (this.puppet.data.isUserToken) {
+				// VK API is weird. Very weird.
+				let biggestImage = this.getBiggestImage(
+					attachment["photo"]["sizes"]
+				);
+				let url: string = biggestImage['url'] || "";
+
+				if (url === "") {
+					log.error(`Image not found in ${attachment["photo"]}`);
+				};
+				await this.puppetBridge.sendFileDetect(params, url);
+			} else {
+				await this.puppetBridge.sendFileDetect(params, attachment["largeSizeUrl"]);
+			}
+		} catch (err) {
+			const opts: IMessageEvent = {
+				body: `Image: ${attachment["image"]["largeSizeUrl"]}`,
+			};
+			await this.puppetBridge.sendMessage(params, opts);
+		}
+	}
+	
+
+	public async handleStickerAttachment(params: IReceiveParams, attachment: MessagesMessageAttachment) {
+		try {
+			if (this.puppet.data.isUserToken) {
+				await this.puppetBridge.sendFileDetect(
+					params, attachment["sticker"]["images_with_background"][4]["url"]
+				)
+			} else {
+				await this.puppetBridge.sendFileDetect(params, attachment["imagesWithBackground"][4]["url"]);
+			}
+
+		} catch (err) {
+			const opts: IMessageEvent = {
+				body: `Sticker: ${attachment["imagesWithBackground"][4]["url"]}`,
+			};
+			await this.puppetBridge.sendMessage(params, opts);
+		}
+	}
+
+	public async handleAudioMessage(params: IReceiveParams, attachment: MessagesMessageAttachment) {
+		let audio_url: string = attachment["oggUrl"] || attachment["url"];
+		if (audio_url === undefined || audio_url === "") {
+			const opts: IMessageEvent = {
+				body: "Audio messages aren't supported yet",
+			};
+			await this.puppetBridge.sendMessage(params, opts);
+		} else {
+			try {
+				await this.puppetBridge.sendAudio(params, audio_url);
+			} catch (err) {
+				const opts: IMessageEvent = {
+					body: `Audio message: ${audio_url}`,
+				};
+				await this.puppetBridge.sendMessage(params, opts);
+			}
+		}
+	}
+
+	public async handleAudio(params: IReceiveParams, attachment: MessagesMessageAttachment) {
+		let audio_url: string = attachment["url"];
+		if (audio_url === undefined || audio_url === "") {
+			const opts: IMessageEvent = {
+				body: "Audio in messages aren't supported yet",
+			};
+			await this.puppetBridge.sendMessage(params, opts);
+		} else {
+			try {
+				await this.puppetBridge.sendAudio(params, audio_url);
+			} catch (err) {
+				const opts: IMessageEvent = {
+					body: `Audio: ${attachment["title"]} by ${attachment["artist"]} ${audio_url}`,
+				};
+				await this.puppetBridge.sendMessage(params, opts);
+			}
+		}
+	}
+
+	public async handleDocument(params: IReceiveParams, attachment: MessagesMessageAttachment) {
+		try {
+			if (this.puppet.data.isUserToken) {
+				await this.puppetBridge.sendFileDetect(params, attachment["doc"]["url"], attachment["doc"]["title"]);
+			} else {
+				const opts: IMessageEvent = {
+					body: `Document: ${attachment["url"]}`,
+				};
+				await this.puppetBridge.sendMessage(params, opts);
+			}
+		} catch (err) {
+			const opts: IMessageEvent = {
+				body: `Document: ${attachment["url"]}`,
+			};
+			await this.puppetBridge.sendMessage(params, opts);
+		}
+	}
+
+	public async handleForwards(
+		vkPuppet: VkPuppet, puppetId: number, message_body: string,
+		params: IReceiveParams, forwards: MessageForwardsCollection
+	) {
+		let formatted = `${message_body}\n`;
+		log.debug("Forawrded messages", forwards);
+
+		for (const f of forwards) {
+			const user = await vkPuppet.getRemoteUser(puppetId, Number(f.senderId));
+			log.debug("Forwarder", user);
+			formatted += `> <[${user.name}](${user.externalUrl})>\n`;
+			f.text?.split("\n").forEach((element) => {
+				formatted += `> ${element}\n`;
+			});
+			if (f.hasAttachments()) {
+				f.attachments.forEach(async (attachment) => {
+					switch (attachment.type) {
+						case AttachmentType.PHOTO:
+							await this.handlePhotoAttachment(params, attachment);
+							break;
+						case AttachmentType.STICKER:
+							await this.handleStickerAttachment(params, attachment);
+							break;
+						case AttachmentType.AUDIO_MESSAGE:
+							await this.handleAudioMessage(params, attachment);
+							break;
+						case AttachmentType.DOCUMENT:
+							await this.handleDocument(params, attachment);
+							break;
+						case AttachmentType.LINK:
+							formatted += `> 🔗 [ ${attachment["title"] ? attachment["title"] : attachment["url"]} ](${attachment["url"]})\n`;
+							break;
+						default:
+							formatted += `> ❓️ Unhandled attachment of type ${attachment.type}\n`;
+							break;
+					}
+				});
+			}
+			if (f.hasForwards) {
+					(
+						await this.handleForwards(vkPuppet, puppetId, "", params, f.forwards)
+					).trim().split("\n").forEach((element) => {
+						formatted += `> ${element}\n`;
+					}
+				);
+			}
+			formatted += "\n";
+		}
+		return formatted;
+	}
+
+}
+
+
 export class VkPuppet {
 	private puppets: IEchoPuppets = {};
 	private converter: Converter = new Converter({
@@ -488,37 +665,34 @@ export class VkPuppet {
 	// VK -> Matrix section //
 	//////////////////////////
 
-	public getBiggestImage(images: object[]): object {
-		let maxImageResolution = 0;
-		let biggestImage: object = {};
-		images.forEach((image: object) => {
-			if (maxImageResolution < (image["width"] + image["height"])) {
-				maxImageResolution = image["width"] + image["height"];
-				biggestImage = image;
-			}
-		});
-
-		return biggestImage;
-	}
-
 	public async handleVkMessage(puppetId: number, context: MessageContext) {
 		const p = this.puppets[puppetId];
 		if (!p) {
 			return;
 		}
+
 		log.debug("Received new message!", context);
+
 		if (context.isOutbox) {
 			return; // Deduping
 		}
 
 		const params = await this.getSendParams(puppetId, context.peerId, context.senderId,
 			p.data.isUserToken ? context.id.toString() : context.conversationMessageId?.toString() || context.id.toString());
+		const attachmentHandler = new AttachmentsHandler(p, this.puppet);
 
 		if (context.hasText || context.hasForwards) {
 			let msgText: string = context.text || "";
 			if (context.hasForwards) {
-				msgText = await this.appendForwards(puppetId, msgText, context.forwards);
+				try {
+					msgText = await attachmentHandler.handleForwards(this, puppetId, msgText, params, context.forwards);
+				} catch (err) {
+					log.error(err);
+					log.debug(context);
+				}
 			}
+			
+			// TODO: fix handling of replies somehow because they aren't sending replies in matrix in user mode at all
 			if (context.hasReplyMessage) {
 				if (this.puppet.eventSync.getMatrix(params.room, context.replyMessage!.id.toString())) {
 					const opts: IMessageEvent = {
@@ -546,6 +720,7 @@ export class VkPuppet {
 				await this.puppet.sendMessage(params, opts);
 			}
 		}
+
 		if (context.hasAttachments()) {
 			const attachments = p.data.isUserToken
 				? (await p.client.api.messages.getById({ message_ids: context.id })).items[0].attachments!
@@ -554,71 +729,23 @@ export class VkPuppet {
 			for (const f of attachments) {
 				switch (f.type) {
 					case AttachmentType.PHOTO:
-						try {
-							if (p.data.isUserToken) {
-								// VK API is weird. Very weird.
-								const biggestImage = this.getBiggestImage(f["photo"]["sizes"]);
-								const url: string = biggestImage["url"] || "";
-
-								if (url === "") {
-									log.error(`Image not found in ${f["photo"]}`);
-								}
-								await this.puppet.sendFileDetect(params, url);
-							} else {
-								await this.puppet.sendFileDetect(params, f["largeSizeUrl"]);
-							}
-						} catch (err) {
-							const opts: IMessageEvent = {
-								body: `Image: ${f["image"]["largeSizeUrl"]}`,
-							};
-							await this.puppet.sendMessage(params, opts);
-						}
+						await attachmentHandler.handlePhotoAttachment(params, f);
 						break;
 
 					case AttachmentType.STICKER:
-						try {
-							p.data.isUserToken ? await this.puppet.sendFileDetect(params, f["sticker"]["images_with_background"][4]["url"])
-								: await this.puppet.sendFileDetect(params, f["imagesWithBackground"][4]["url"]);
-						} catch (err) {
-							const opts: IMessageEvent = {
-								body: `Sticker: ${f["imagesWithBackground"][4]["url"]}`,
-							};
-							await this.puppet.sendMessage(params, opts);
-						}
+						await attachmentHandler.handleStickerAttachment(params, f);
 						break;
 
 					case AttachmentType.AUDIO_MESSAGE:
-						try {
-							await this.puppet.sendAudio(params, f["oggUrl"]);
-						} catch (err) {
-							const opts: IMessageEvent = {
-								body: `Audio message: ${f["url"]}`,
-							};
-							await this.puppet.sendMessage(params, opts);
-						}
+						await attachmentHandler.handleAudioMessage(params, f)
 						break;
 
 					case AttachmentType.AUDIO:
-						try {
-							await this.puppet.sendAudio(params, f["url"]);
-						} catch (err) {
-							const opts: IMessageEvent = {
-								body: `Audio: ${f["title"]} by ${f["artist"]} ${f["url"]}`,
-							};
-							await this.puppet.sendMessage(params, opts);
-						}
+						await attachmentHandler.handleAudio(params, f);
 						break;
 
 					case AttachmentType.DOCUMENT:
-						try {
-							p.data.isUserToken ? await this.puppet.sendFileDetect(params, f["doc"]["url"], f["doc"]["title"])
-								: await this.puppet.sendFileDetect(params, f["url"], f["title"]);
-						} catch (err) {
-							const opts: IMessageEvent = {
-								body: `Document: ${f["url"]}`,
-							};
-							await this.puppet.sendMessage(params, opts);
-						}
+						await attachmentHandler.handleDocument(params, f);
 						break;
 
 					case AttachmentType.LINK:
@@ -701,51 +828,6 @@ export class VkPuppet {
 			}
 		}
 		return (splitted.join("\n").trim());
-	}
-
-	public async appendForwards(puppetId: number, body: string, forwards: MessageForwardsCollection) {
-		let formatted = `${body}\n`;
-		for (const f of forwards) {
-			const user = await this.getRemoteUser(puppetId, Number(f.senderId));
-			formatted += `> <[${user.name}](${user.externalUrl})>\n`;
-			f.text?.split("\n").forEach((element) => {
-				formatted += `> ${element}\n`;
-			});
-			if (f.hasAttachments()) {
-				f.attachments.forEach((attachment) => {
-					switch (attachment.type) {
-						case AttachmentType.PHOTO:
-							formatted += `> 🖼️ [Photo](${attachment["largeSizeUrl"]})\n`;
-							break;
-						case AttachmentType.STICKER:
-							formatted += `> 🖼️ [Sticker](${attachment["imagesWithBackground"][4]["url"]})\n`;
-							break;
-						case AttachmentType.AUDIO_MESSAGE:
-							formatted += `> 🗣️ [Audio message](${attachment["oggUrl"]})\n`;
-							break;
-						case AttachmentType.AUDIO:
-							formatted += `> 🗣️ [Audio message](${attachment["oggUrl"] ?? attachment["url"]})\n`;
-							break;
-						case AttachmentType.DOCUMENT:
-							formatted += `> 📁 [File ${attachment["title"]}](${attachment["url"]})\n`;
-							break;
-						case AttachmentType.LINK:
-							formatted += `> 🔗 [ ${attachment["title"] ? attachment["title"] : attachment["url"]} ](${attachment["url"]})\n`;
-							break;
-						default:
-							formatted += `> ❓️ Unhandled attachment of type ${attachment.type}\n`;
-							break;
-					}
-				});
-			}
-			if (f.hasForwards) {
-				(await this.appendForwards(puppetId, "", f.forwards)).trim().split("\n").forEach((element) => {
-					formatted += `> ${element}\n`;
-				});
-			}
-			formatted += "\n";
-		}
-		return formatted;
 	}
 
 	public async renderWallPost(puppetId: number, post: MessagesMessageAttachment) {
