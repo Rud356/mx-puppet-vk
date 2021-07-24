@@ -1,11 +1,11 @@
 {
   "name": "mx-puppet-vk",
-  "version": "0.5.2",
+  "version": "0.6.0",
   "description": "Matrix <-> VK bridge based on mx-puppet-bridge and VK-IO.",
   "main": "index.js",
   "repository": {
-    "type" : "git",
-    "url" : "https://github.com/innereq/mx-puppet-vk.git"
+    "type": "git",
+    "url": "https://github.com/innereq/mx-puppet-vk.git"
   },
   "license": "AGPL-3.0-only",
   "scripts": {
@@ -23,7 +23,7 @@
     "showdown": "^1.9.1",
     "tslint": "^5.17.0",
     "typescript": "^4.3.4",
-    "vk-io": "^4.3.1"
+    "vk-io": "^4.3.2"
   },
   "devDependencies": {
     "@types/node": "^12.20.15",
