@@ -120,6 +120,7 @@ where the access token is `df89482ba9a19e5a2dee85031612b021a08cd521115e1c7d2cd70
 - VK (AS A USER) -> Matrix
     - [x] Auth as a user instead of group
     - [x] Text content
+    - [x] Replies (as forwards)
     - [x] Forwards
     - [x] Image content
     - [ ] Audio content - unavailable via user tokens

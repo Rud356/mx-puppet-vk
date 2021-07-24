@@ -98,6 +98,8 @@ async function run() {
 	puppet.on("typing", vk.handleMatrixTyping.bind(vk));
 
 	puppet.setCreateRoomHook(vk.createRoom.bind(vk));
+	puppet.setGetUserIdsInRoomHook(vk.getUserIdsInRoom.bind(vk));
+	puppet.setCreateUserHook(vk.createUser.bind(vk));
 	// required: get description hook
 	// tslint:disable-next-line: no-any
 	puppet.setGetDescHook(async (puppetId: number, data: any): Promise<string> => {
